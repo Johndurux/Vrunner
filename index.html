@@ -594,6 +594,10 @@
         <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">$VIBE</span>
         <div class="hud-dist" id="hudCoins" style="color:#f5a623;">0</div>
       </div>
+      <div class="hud-dist-box" id="hudPowerupBox" style="display:none;">
+        <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">Power-up</span>
+        <div class="hud-dist" id="hudPowerup" style="color:#22e0c8;font-size:22px;"></div>
+      </div>
     </div>
     <div style="font-family:'JetBrains Mono'; font-size:12px; color:rgba(255,255,255,0.4); text-align:center;">
       ← Left | Right → | ↑ Jump | ↓ Slide
@@ -662,6 +666,11 @@
       dodge() { this.playTone(340, 260, 0.08, 'sine', 0.05); }
       coin() { this.playTone(980, 1400, 0.1, 'sine', 0.08); }
       crash() { this.playTone(160, 40, 0.45, 'sawtooth', 0.2); }
+      // Added for the power-up set: pickup, multiplier and near-miss each get
+      // their own tone so the player can tell what happened without looking.
+      powerup() { this.playTone(420, 900, 0.22, 'square', 0.09); }
+      multiplier() { this.playTone(660, 1320, 0.28, 'sine', 0.1); }
+      nearMiss() { this.playTone(1200, 520, 0.13, 'sine', 0.07); }
     }
     const audio = new AudioEngine();
 
@@ -1461,6 +1470,242 @@
       return g;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  POWER-UPS
+    //  Durasi dihitung dari game time (dt), bukan setTimeout, supaya
+    //  power-up nggak berkurang durasinya ketika player pause.
+    // ═══════════════════════════════════════════════════════════════
+    const POWERUP_DUR = { hoverboard: 8, magnet: 6, multiplier: 10 };
+    let powerup = null;          // { type, timeLeft }
+    let hoverboardHitsLeft = 0;  // obstacle crashes the board can absorb
+    let shieldGlow = null;       // additive glow mesh under the player's feet
+
+    function createHoverboard() {
+      const g = new THREE.Group();
+      g.userData = { type: 'hoverboard', box: new THREE.Box3(), collected: false };
+      const deck = vox(1.25, 0.13, 2.0, 0x22e0c8, { y: 0.72 });
+      deck.material = new THREE.MeshStandardMaterial({
+        color: 0x22e0c8, emissive: 0x0fbfa8, emissiveIntensity: 0.85,
+        metalness: 0.4, roughness: 0.35
+      });
+      const nose = vox(0.9, 0.1, 0.4, 0x9ffff0, { y: 0.8, z: -0.95 });
+      const finL = vox(0.1, 0.3, 0.5, 0x0fbfa8, { y: 0.95, x: -0.5 });
+      const finR = vox(0.1, 0.3, 0.5, 0x0fbfa8, { y: 0.95, x: 0.5 });
+      g.add(deck, nose, finL, finR);
+      return g;
+    }
+
+    function createMagnet() {
+      const g = new THREE.Group();
+      g.userData = { type: 'magnet', box: new THREE.Box3(), collected: false };
+      const core = vox(0.5, 0.5, 0.5, 0xff5cd6, { y: 0.95 });
+      core.material = new THREE.MeshStandardMaterial({
+        color: 0xff5cd6, emissive: 0xff2bb5, emissiveIntensity: 0.9,
+        metalness: 0.5, roughness: 0.25
+      });
+      // U-shaped magnet body: two uprights joined by a crossbar.
+      const armL = vox(0.16, 0.7, 0.16, 0xe0e6f0, { y: 1.0, x: -0.34, z: -0.2 });
+      const armR = vox(0.16, 0.7, 0.16, 0xe0e6f0, { y: 1.0, x: 0.34, z: -0.2 });
+      const bar = vox(0.84, 0.16, 0.16, 0xe0e6f0, { y: 1.32, z: -0.2 });
+      const tipL = vox(0.18, 0.16, 0.18, 0xff5cd6, { y: 0.68, x: -0.34, z: -0.2 });
+      const tipR = vox(0.18, 0.16, 0.18, 0xff5cd6, { y: 0.68, x: 0.34, z: -0.2 });
+      g.add(core, armL, armR, bar, tipL, tipR);
+      return g;
+    }
+
+    function createMultiplier() {
+      const g = new THREE.Group();
+      g.userData = { type: 'multiplier', box: new THREE.Box3(), collected: false };
+      const body = vox(0.85, 0.85, 0.22, 0x7c5cff, { y: 0.95 });
+      body.material = new THREE.MeshStandardMaterial({
+        color: 0x7c5cff, emissive: 0x5a3cff, emissiveIntensity: 0.9,
+        metalness: 0.45, roughness: 0.3
+      });
+      // Stylised "x2" from plain voxels: a diagonal bar plus a 2.
+      const slash = vox(0.12, 0.5, 0.06, 0xffffff, { y: 0.95, z: 0.16 });
+      slash.rotation.z = 0.6;
+      const d1 = vox(0.3, 0.11, 0.06, 0xffffff, { y: 1.22, x: 0.18, z: 0.16 });
+      const d2 = vox(0.3, 0.11, 0.06, 0xffffff, { y: 0.96, x: 0.18, z: 0.16 });
+      const d3 = vox(0.11, 0.3, 0.06, 0xffffff, { y: 0.83, x: 0.32, z: 0.16 });
+      g.add(body, slash, d1, d2, d3);
+      return g;
+    }
+
+    const POWERUP_FACTORY = {
+      hoverboard: createHoverboard,
+      magnet: createMagnet,
+      multiplier: createMultiplier
+    };
+
+    function makeShieldGlow() {
+      const geo = new THREE.PlaneGeometry(3.0, 3.0);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x22e0c8, transparent: true, opacity: 0.28,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = 0.06;
+      m.visible = false;
+      return m;
+    }
+
+    function activatePowerup(type) {
+      powerup = { type, timeLeft: POWERUP_DUR[type] };
+      if (type === 'hoverboard') {
+        hoverboardHitsLeft = 1;
+        if (!shieldGlow) {
+          shieldGlow = makeShieldGlow();
+          scene.add(shieldGlow);
+        }
+        shieldGlow.visible = true;
+      }
+      audio.powerup();
+      updatePowerupHud();
+    }
+
+    function expirePowerup() {
+      powerup = null;
+      hoverboardHitsLeft = 0;
+      if (shieldGlow) shieldGlow.visible = false;
+      updatePowerupHud();
+    }
+
+    function updatePowerupHud() {
+      const el = document.getElementById('hudPowerup');
+      const box = document.getElementById('hudPowerupBox');
+      if (!el || !box) return;
+      if (!powerup) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      el.textContent = `${powerup.type === 'multiplier' ? 'x2 ' : ''}${powerup.timeLeft.toFixed(1)}s`;
+      el.style.color = powerup.type === 'hoverboard' ? '#22e0c8'
+        : powerup.type === 'magnet' ? '#ff5cd6' : '#7c5cff';
+    }
+
+    function updatePowerup(dt, playerX) {
+      if (!powerup) return;
+      powerup.timeLeft -= dt;
+      if (powerup.timeLeft <= 0) { expirePowerup(); return; }
+      updatePowerupHud();
+
+      // Hoverboard speed boost is applied in the speed calc (see runSpeedBoost).
+      if (shieldGlow && shieldGlow.visible) {
+        shieldGlow.position.x = playerX;
+        shieldGlow.material.opacity = 0.22 + Math.sin(performance.now() / 160) * 0.09;
+      }
+
+      // Coin magnet: pull nearby coins to the player, then let the normal
+      // intersectsBox pickup in update() collect them.
+      if (powerup.type === 'magnet') {
+        for (let i = activeItems.length - 1; i >= 0; i--) {
+          const it = activeItems[i];
+          if (it.userData.type !== 'coin' || it.userData.collected) continue;
+          const dx = playerX - it.position.x;
+          const dz = playerY - it.position.y;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < 100) {           // 10m radius
+            it.position.x += dx * 3.2 * dt;
+            it.position.z += dz * 3.2 * dt;
+            it.position.y += 0.6 * dt;  // drift up into the pickup box
+          }
+        }
+      }
+    }
+
+    function runSpeedBoost() {
+      return powerup && powerup.type === 'hoverboard' ? 1.2 : 1;
+    }
+
+    // Hard combo used past 800m: a tall wall you must jump, with a low beam
+    // hanging in the SAME row that forces a slide on the way down. The two
+    // parts are separate child groups but share one obstacle entry, so the
+    // existing activeObstacles/collision loop handles them as a unit.
+    function createComboGate() {
+      const g = new THREE.Group();
+      g.userData = { type: 'combo', cleared: false, box: new THREE.Box3() };
+
+      // Jump part: a solid voxel wall, similar height to the red candle.
+      const wall = vox(2.2, 3.2, 0.5, 0x8a3fd8, { y: 1.6 });
+      wall.material = new THREE.MeshStandardMaterial({
+        color: 0x8a3fd8, emissive: 0x5a1fb0, emissiveIntensity: 0.55,
+        metalness: 0.3, roughness: 0.5
+      });
+      const capL = vox(0.5, 0.22, 0.56, 0xd8a8ff, { y: 3.3, x: -0.8 });
+      const capR = vox(0.5, 0.22, 0.56, 0xd8a8ff, { y: 3.3, x: 0.8 });
+
+      // Slide part: a low hanging beam with clearance underneath.
+      const beam = vox(2.2, 1.5, 0.45, 0x2bd8ff, { y: 1.95, z: 1.6 });
+      beam.material = new THREE.MeshStandardMaterial({
+        color: 0x2bd8ff, emissive: 0x1aa8d8, emissiveIntensity: 0.6,
+        metalness: 0.3, roughness: 0.5
+      });
+      const strip = vox(2.0, 0.14, 0.5, 0xffffff, { y: 1.18, z: 1.6 });
+      strip.material = new THREE.MeshBasicMaterial({ color: 0xd8faff });
+
+      g.add(wall, capL, capR, beam, strip);
+      return g;
+    }
+
+    function coinValue() {
+      return powerup && powerup.type === 'multiplier' ? 2 : 1;
+    }
+
+    // One obstacle per row, and only rarely a power-up: roughly one
+    // power-up per ~40 obstacle rows so it stays a treat instead of noise.
+    let powerupSpawnDebt = 20;   // rows until the next power-up rolls
+    function maybeSpawnPowerup(zPos) {
+      if (powerupSpawnDebt > 0) { powerupSpawnDebt--; return; }
+      const types = Object.keys(POWERUP_FACTORY);
+      const type = types[Math.floor(Math.random() * types.length)];
+      const lane = Math.floor(Math.random() * 3);
+      const item = POWERUP_FACTORY[type]();
+      item.position.set(LANES[lane], 0, zPos);
+      scene.add(item);
+      activeItems.push(item);
+      powerupSpawnDebt = 28 + Math.floor(Math.random() * 24);   // 28-51 rows
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CAMERA FEEL: screen shake, speed FOV, lane roll
+    // ═══════════════════════════════════════════════════════════════
+    let shakeTimeLeft = 0, shakeDuration = 0, shakeAmp = 0;
+    function triggerScreenShake(duration, amplitude) {
+      // Never shorten an in-flight shake: a new impact extends the current one.
+      shakeTimeLeft = Math.max(shakeTimeLeft, duration);
+      shakeDuration = Math.max(shakeDuration, duration);
+      shakeAmp = Math.max(shakeAmp, amplitude);
+    }
+    function updateScreenShake(dt) {
+      if (shakeTimeLeft <= 0) { shakeAmp = 0; return; }
+      shakeTimeLeft -= dt;
+      const k = shakeDuration > 0 ? Math.max(0, shakeTimeLeft / shakeDuration) : 0;
+      // Decaying random offset, scaled by remaining shake time.
+      const amp = shakeAmp * k * k;
+      camera.position.x = camTargetPos.x + (Math.random() * 2 - 1) * amp;
+      camera.position.y = camTargetPos.y + (Math.random() * 2 - 1) * amp;
+      if (shakeTimeLeft <= 0) shakeAmp = 0;
+    }
+
+    const BASE_FOV = 62;
+    let currentFov = BASE_FOV;
+    function updateSpeedFov(dt) {
+      // FOV opens up as the run speeds up: runSpeed 18 -> 62, 36 -> 70.
+      const target = BASE_FOV + (Math.min(runSpeed, 36) - 18) / 18 * 8 * runSpeedBoost();
+      currentFov += (target - currentFov) * Math.min(1, 4 * dt);   // smooth lerp
+      if (Math.abs(camera.fov - currentFov) > 0.01) {
+        camera.fov = currentFov;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    function updateCameraRoll(dt) {
+      // Small roll toward the lane the player just moved into. Derived from the
+      // lane target so it eases in with the same curve as the mesh.
+      const laneDelta = LANES[playerLane] - currentPlayerMesh.position.x;
+      const targetRoll = Math.max(-0.09, Math.min(0.09, -laneDelta * 0.05));
+      camera.rotation.z += (targetRoll - camera.rotation.z) * Math.min(1, 5 * dt);
+    }
+
     function spawnRow(zPos) {
       const freeLanes = [0, 1, 2];
       const obsLane = freeLanes.splice(Math.floor(Math.random() * freeLanes.length), 1)[0];
@@ -1472,6 +1717,14 @@
       if (r < 0.40) obs = createRedCandle();
       else if (r < 0.75) obs = createMarginBarrier();
       else obs = createSecSign();
+
+      // Past 800m, a row may be sealed with a combo: a jump target and a slide
+      // target in the SAME row, so the player must handle both in one pass.
+      // When the combo wins, the single obstacle is NOT spawned at all (the
+      // collision loop has no `superseded` flag, so a flagged obstacle would
+      // still collide).
+      const useCombo = distance > 800 && Math.random() < 0.22;
+      if (useCombo) obs = createComboGate();
 
       obs.position.set(LANES[obsLane], 0, zPos);
       scene.add(obs);
@@ -1485,6 +1738,7 @@
         scene.add(c);
         activeItems.push(c);
       }
+      maybeSpawnPowerup(zPos);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1546,6 +1800,12 @@
       distance = 0;
       sessionCoins = 0;
       updateCoinHud();
+      // Clear any power-up left over from the previous run, and reset the
+      // hoverboard shield so a new run never starts with a free hit.
+      expirePowerup();
+      powerupSpawnDebt = 20;
+      shakeTimeLeft = 0; shakeDuration = 0; shakeAmp = 0;
+      currentFov = BASE_FOV;
 
       currentPlayerMesh.rotation.y = Math.PI;
       currentPlayerMesh.position.set(0, GROUND_Y, 0);
@@ -1613,6 +1873,9 @@
       gameState = 'GAMEOVER';
       audio.crash();
       resetPlayerMotion();
+      // Stop the power-up timers and pull the hoverboard glow down, so the
+      // death screen is not left with a running countdown and a glowing shield.
+      expirePowerup();
 
       // Trump lunges forward to catch player
       if (trumpChaser) {
@@ -1949,7 +2212,11 @@
             slideTimeLeft = 0;
           }
         }
-        runSpeed = Math.min(36, 18 + (distance / 120));
+        // The hoverboard adds 20% on top of the distance-scaled speed. The
+        // speed cap moves out while it is active so the boost cannot push the
+        // scene past what the track spawner can keep up with.
+        const cap = powerup && powerup.type === 'hoverboard' ? 43 : 36;
+        runSpeed = Math.min(cap, (18 + (distance / 120)) * runSpeedBoost());
         const moveZ = runSpeed * dt;
         distance += moveZ;
 
@@ -2022,6 +2289,12 @@
         // Check Obstacles
         for (let i = activeObstacles.length - 1; i >= 0; i--) {
           const obs = activeObstacles[i];
+          // Remember where the obstacle started this frame. At low frame rates
+          // (or with the hoverboard boost) moveZ can exceed the width of the hit
+          // zone, and testing only the end position let obstacles tunnel clean
+          // through the player with no hit ever registered. Every zone test
+          // below therefore runs against the whole travelled interval.
+          const zPrev = obs.position.z;
           obs.position.z += moveZ;
 
           // If obstacle already cleared, skip collision
@@ -2034,8 +2307,13 @@
           }
 
           const sameLane = Math.abs(playerX - obs.position.x) < 1.0;
-          const approaching = obs.position.z >= -3.5 && obs.position.z <= 0.6;
-          const inHitZone = obs.position.z >= -0.55 && obs.position.z <= 0.55;
+          // Swept interval: the zone test passes if EITHER the previous or the
+          // new position is inside it, i.e. the obstacle crossed the player at
+          // any point during this frame.
+          const zMin = Math.min(zPrev, obs.position.z);
+          const zMax = Math.max(zPrev, obs.position.z);
+          const approaching = zMin <= 0.6 && zMax >= -3.5;
+          const inHitZone = zMax >= -0.55 && zMin <= 0.55;
 
           // Proactive clearance while approaching
           if (sameLane && approaching) {
@@ -2058,10 +2336,37 @@
               obs.userData.cleared = true;
               continue;
             }
+            // Combo gate: clear it by jumping over the wall part (real height,
+            // like the red candle) OR by sliding under the beam part. Because
+            // both parts share one obstacle entry, either response clears the
+            // whole gate.
+            if (obs.userData.type === 'combo' && (playerY > 2.2 || isSliding)) {
+              obs.userData.cleared = true;
+              continue;
+            }
+          }
+
+          // Near-miss: an obstacle in our lane that we only just squeezed past.
+          // Plays once, on the frame the obstacle leaves the hit zone, so the
+          // player hears a reward for a close call instead of a generic thud.
+          if (sameLane && !obs.userData.nearMissed && !obs.userData.cleared
+              && zMin > 0.55 && zMax < 1.6) {
+            obs.userData.nearMissed = true;
+            audio.nearMiss();
           }
 
           // Direct crash!
           if (sameLane && inHitZone) {
+            // Hoverboard absorbs exactly one collision, then breaks.
+            if (hoverboardHitsLeft > 0) {
+              hoverboardHitsLeft--;
+              obs.userData.cleared = true;
+              if (hoverboardHitsLeft === 0 && shieldGlow) shieldGlow.visible = false;
+              triggerScreenShake(0.18, 0.45);
+              audio.crash();
+              continue;
+            }
+            triggerScreenShake(0.15, 0.5);
             triggerGameOver();
             return;
           }
@@ -2072,18 +2377,39 @@
           }
         }
 
-        // Check Coins
+        // Check Coins & Power-ups
         for (let i = activeItems.length - 1; i >= 0; i--) {
           const item = activeItems[i];
+          // Same swept-interval concern as obstacles: a large moveZ could step
+          // the item clean past the player's box. Keep a copy so the test can
+          // also cover the slice the item travelled through.
+          const ziPrev = item.position.z;
           item.position.z += moveZ;
           item.rotation.y += 3.5 * dt;
           item.userData.box.setFromObject(item);
 
+          // Widen the box along z to cover the swept slice, so a fast-moving
+          // coin cannot be skipped between two frames.
+          if (!item.userData.collected) {
+            const halfZ = (item.userData.box.max.z - item.userData.box.min.z) / 2;
+            item.userData.box.min.z = Math.min(item.userData.box.min.z,
+                                            ziPrev - halfZ);
+            item.userData.box.max.z = Math.max(item.userData.box.max.z,
+                                            ziPrev + halfZ);
+          }
+
           if (!item.userData.collected && playerBox.intersectsBox(item.userData.box)) {
             item.userData.collected = true;
-            sessionCoins += 1;
-            updateCoinHud();
-            audio.coin();
+            const isCoin = item.userData.type === 'coin';
+            if (isCoin) {
+              // The multiplier doubles coin value; updateCoinHud() keeps the
+              // HUD in sync with the counter.
+              sessionCoins += coinValue();
+              updateCoinHud();
+              audio.coin();
+            } else {
+              activatePowerup(item.userData.type);
+            }
             disposeObject(item);
             activeItems.splice(i, 1);
             continue;
@@ -2099,6 +2425,15 @@
         camTargetPos.y = CAM_GAME.y + (playerY * 0.4);
         camTargetLook.x = currentPlayerMesh.position.x * 0.2;
         camTargetLook.y = CAM_GAME.lookY + (playerY * 0.25);
+
+        // Power-up tick: timers, magnet pull and the hoverboard glow. Driven by
+        // game time, so pausing freezes the countdown instead of eating it.
+        updatePowerup(dt, LANES[playerLane]);
+
+        // Camera feel: FOV follows speed, roll follows the lane, shake decays.
+        updateSpeedFov(dt);
+        updateCameraRoll(dt);
+        updateScreenShake(dt);
 
         // === TRUMP CHASER UPDATE (SUBWAY SURFERS STYLE) ===
         if (chaserActive && trumpChaser) {
@@ -2147,7 +2482,25 @@
     // Debug/QA hook: module-scope `let`s are not reachable from page.evaluate,
     // so mirror the ones the behavioural tests need onto window.
     window.__vrState = () => ({ isPaused, isSliding, gameState, distance,
-                                 playerY, playerLane, slideTimeLeft });
+                                 playerY, playerLane, slideTimeLeft,
+                                 sessionCoins, runSpeed,
+                                 powerup: powerup ? { type: powerup.type,
+                                                      timeLeft: +powerup.timeLeft.toFixed(2) } : null,
+                                 hits: hoverboardHitsLeft,
+                                 coinValue: coinValue(),
+                                 fov: +camera.fov.toFixed(2),
+                                 camRoll: +camera.rotation.z.toFixed(4),
+                                 shake: +shakeTimeLeft.toFixed(3),
+                                 obsTypes: activeObstacles.map(o => o.userData.type),
+                                 itemTypes: activeItems.map(i => i.userData.type) });
+
+    // Debug bridge for the automated tests: run a snippet INSIDE the module
+    // scope, so it can touch the private let-bindings above. The test harness
+    // cannot read window.* from here (isolated world), hence this indirection.
+    window.__vrRun = (code) => {
+      try { return {ok: true, value: eval(code)}; }
+      catch (e) { return {ok: false, error: String(e)}; }
+    };
 
     function animate() {
       requestAnimationFrame(animate);
