@@ -1662,11 +1662,15 @@
         isGrounded = false;
         audio.jump();
 
-        // Proactive Jump Clearance: Any hurdle approaching in this lane is marked cleared immediately!
+        // Proactive Jump Clearance: hurdles in this lane that are ALREADY
+        // inside the hit zone get marked cleared immediately. The previous
+        // range (z >= -5.5 && z <= 0.8) pre-cleared obstacles up to 5.5m in
+        // front of the player, which let you clear a barrier you had not
+        // even reached yet, and pre-cleared the tall candle too.
         activeObstacles.forEach(obs => {
           const sameLane = Math.abs(LANES[playerLane] - obs.position.x) < 1.1;
-          const inJumpRange = obs.position.z >= -5.5 && obs.position.z <= 0.8;
-          if (sameLane && inJumpRange && (obs.userData.type === 'barrier' || obs.userData.type === 'secsign')) {
+          const inHitZone = obs.position.z >= -0.55 && obs.position.z <= 0.55;
+          if (sameLane && inHitZone && (obs.userData.type === 'barrier' || obs.userData.type === 'secsign')) {
             obs.userData.cleared = true; // Safely cleared! Can never kill player upon landing
           }
         });
@@ -1677,18 +1681,30 @@
       if (gameState !== 'RUNNING') return;
       if (!isSliding) {
         isSliding = true;
-        if (!isGrounded) playerVy = -24;
+        // Fast-fall: drive the fall directly instead of adding -24 on top of
+        // gravity (-38*dt), which used to ACCELERATE the drop. The previous
+        // `playerVy = -24` assignment compounded with gravity and made
+        // jump-then-slide land harder and higher than a plain jump.
+        if (!isGrounded) {
+          isGrounded = true;
+          playerY = 0;
+          playerVy = 0;
+          currentPlayerMesh.scale.set(1, 1, 1);
+          currentPlayerMesh.position.y = GROUND_Y;
+        }
         if (slideTimer) clearTimeout(slideTimer);
         slideTimer = setTimeout(() => {
           isSliding = false;
           slideTimer = null;
         }, 550);
 
-        // Proactive Slide Clearance: Any hanging sign approaching is marked cleared!
+        // Proactive Slide Clearance: the SEC sign is ALREADY in the hit zone.
+        // The previous range (z >= -5.5 && z <= 0.8) pre-cleared signs up to
+        // 5.5m in front of the player, sliding through empty track.
         activeObstacles.forEach(obs => {
           const sameLane = Math.abs(LANES[playerLane] - obs.position.x) < 1.1;
-          const inSlideRange = obs.position.z >= -5.5 && obs.position.z <= 0.8;
-          if (sameLane && inSlideRange && obs.userData.type === 'secsign') {
+          const inHitZone = obs.position.z >= -0.55 && obs.position.z <= 0.55;
+          if (sameLane && inHitZone && obs.userData.type === 'secsign') {
             obs.userData.cleared = true; // Safely slid underneath!
           }
         });
@@ -1961,6 +1977,13 @@
         playerBox.setFromObject(currentPlayerMesh);
         playerBox.expandByScalar(-0.16);
 
+        // Use the player's COMMITTED lane for collision, not the mesh's
+        // interpolated x. The mesh lerps toward targetX at 14*dt, so between
+        // the keypress and the arrival there was a window where the player
+        // was visually still in the old lane while playerLane had already
+        // flipped, causing unavoidable hits on the newly-entered lane.
+        const playerX = LANES[playerLane];
+
         // Check Obstacles
         for (let i = activeObstacles.length - 1; i >= 0; i--) {
           const obs = activeObstacles[i];
@@ -1975,7 +1998,7 @@
             continue;
           }
 
-          const sameLane = Math.abs(currentPlayerMesh.position.x - obs.position.x) < 1.0;
+          const sameLane = Math.abs(playerX - obs.position.x) < 1.0;
           const approaching = obs.position.z >= -3.5 && obs.position.z <= 0.6;
           const inHitZone = obs.position.z >= -0.55 && obs.position.z <= 0.55;
 
@@ -1983,6 +2006,15 @@
           if (sameLane && approaching) {
             // Jump over barrier: if player is airborne (jumping: playerY > 0.12 or moving upward)
             if (obs.userData.type === 'barrier' && (!isGrounded || playerY > 0.12 || playerVy > 0)) {
+              obs.userData.cleared = true;
+              continue;
+            }
+            // Jump over the tall red candle. The candle body is 3.4m tall, so
+            // unlike the low barrier it needs REAL height (jump apex is
+            // 16.5^2 / (2*38) = 3.58m) rather than merely being airborne.
+            // Without this branch the candle had no clear path at all and
+            // could only be avoided by changing lanes.
+            if (obs.userData.type === 'redcandle' && playerY > 2.2) {
               obs.userData.cleared = true;
               continue;
             }
