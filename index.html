@@ -1498,6 +1498,8 @@
     let isGrounded = true;
     let isSliding = false;
     let slideTimer = null;
+    let slideTimeLeft = 0;
+    let isPaused = false;
     let runStartTimer = null;
     let runSpeed = 18;
     let distance = 0;
@@ -1510,6 +1512,7 @@
       isGrounded = true;
       playerY = 0;
       playerVy = 0;
+      slideTimeLeft = 0;
       if (slideTimer) {
         clearTimeout(slideTimer);
         slideTimer = null;
@@ -1661,6 +1664,7 @@
         playerVy = 16.5; // High snappy responsive jump
         isGrounded = false;
         audio.jump();
+        slideTimeLeft = 0; // cancel any in-flight slide when jumping
 
         // Proactive Jump Clearance: hurdles in this lane that are ALREADY
         // inside the hit zone get marked cleared immediately. The previous
@@ -1693,10 +1697,11 @@
           currentPlayerMesh.position.y = GROUND_Y;
         }
         if (slideTimer) clearTimeout(slideTimer);
-        slideTimer = setTimeout(() => {
-          isSliding = false;
-          slideTimer = null;
-        }, 550);
+        slideTimer = null;
+        // Slide duration is decremented in update() from game time, not from a
+        // wall-clock setTimeout. With setTimeout the slide kept running while
+        // the tab was backgrounded and expired before the player ever saw it.
+        slideTimeLeft = 0.55;
 
         // Proactive Slide Clearance: the SEC sign is ALREADY in the hit zone.
         // The previous range (z >= -5.5 && z <= 0.8) pre-cleared signs up to
@@ -1723,16 +1728,28 @@
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') slideAction();
     });
 
-    let touchX = 0, touchY = 0;
+    let touchX = 0, touchY = 0, touchActive = false;
     window.addEventListener('touchstart', e => {
       audio.init();
-      touchX = e.changedTouches[0].screenX;
-      touchY = e.changedTouches[0].screenY;
+      // Multi-touch: only track a single finger. Without this guard a pinch or
+      // two-finger gesture feeds two different touchend events into the same
+      // touchX/touchY pair and fires a spurious lane change.
+      if (e.touches.length !== 1) { touchActive = false; return; }
+      touchActive = true;
+      touchX = e.changedTouches[0].clientX;
+      touchY = e.changedTouches[0].clientY;
     }, { passive: true });
 
     window.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].screenX - touchX;
-      const dy = e.changedTouches[0].screenY - touchY;
+      if (!touchActive) return;
+      touchActive = false;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - touchX;
+      const dy = t.clientY - touchY;
+      // clientX/clientY, not screenX/screenY: screenX is in physical screen
+      // coordinates, which are offset whenever the page is scrolled or zoomed,
+      // so swipes could land on the wrong lane (or a different screen).
       if (Math.abs(dx) > Math.abs(dy)) {
         if (dx > 35) switchLane(1);
         else if (dx < -35) switchLane(-1);
@@ -1817,6 +1834,7 @@
 
     function shortAddr(addr) {
       if (!addr || addr === 'you') return 'you';
+      if (addr.startsWith('DEMO-')) return addr; // placeholder label, keep whole
       if (addr.includes('...')) return addr;
       if (addr.length < 12) return addr;
       return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -1833,12 +1851,16 @@
     function renderLeaderboard() {
       const leadRows = document.getElementById('leaderboardRows');
       leadRows.innerHTML = '';
+      // The five rows below are PLACEHOLDER entries, not real players. They are
+      // labelled so nobody mistakes the board for live on-chain data. Replace
+      // this array with a fetch() of your testnet contract when the on-chain
+      // layer lands.
       const seed = [
-        { addr: '0x8f21...4e91', dist: 2840, coins: 490 },
-        { addr: '0x3c19...99a4', dist: 2150, coins: 340 },
-        { addr: '0x12d0...b47c', dist: 1890, coins: 280 },
-        { addr: '0x7e44...00f2', dist: 1420, coins: 190 },
-        { addr: '0xaa81...81c3', dist: 1100, coins: 145 },
+        { addr: 'DEMO-1', dist: 2840, coins: 490, demo: true },
+        { addr: 'DEMO-2', dist: 2150, coins: 340, demo: true },
+        { addr: 'DEMO-3', dist: 1890, coins: 280, demo: true },
+        { addr: 'DEMO-4', dist: 1420, coins: 190, demo: true },
+        { addr: 'DEMO-5', dist: 1100, coins: 145, demo: true },
       ];
       const mine = (loadSave().scores || []).map(s => ({
         addr: s.addr,
@@ -1851,7 +1873,11 @@
         const rank = `#${i + 1}`;
         const rankCls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
         const tr = document.createElement('tr');
-        const label = l.you ? `${shortAddr(l.addr)} (you)` : shortAddr(l.addr);
+        // Mark the placeholder rows so the board cannot be read as live
+        // on-chain data. Real scores render normally.
+        const label = l.you
+          ? `${shortAddr(l.addr)} (you)`
+          : (l.demo ? `${shortAddr(l.addr)} (demo)` : shortAddr(l.addr));
         tr.innerHTML = `
           <td class="${rankCls}">${rank}</td>
           <td>${label}</td>
@@ -1897,6 +1923,7 @@
 
     function update(dt) {
       const t = clock.getElapsedTime();
+      if (isPaused) return; // frozen: no distance, no collision, no death
 
       // Camera Smooth Interpolation
       camera.position.lerp(camTargetPos, 8 * dt);
@@ -1914,6 +1941,14 @@
 
       // --- RUNNING IN GAME ---
       if (gameState === 'RUNNING') {
+        // Slide timer runs on game time so a backgrounded tab cannot expire it.
+        if (isSliding) {
+          slideTimeLeft -= dt;
+          if (slideTimeLeft <= 0) {
+            isSliding = false;
+            slideTimeLeft = 0;
+          }
+        }
         runSpeed = Math.min(36, 18 + (distance / 120));
         const moveZ = runSpeed * dt;
         distance += moveZ;
@@ -2090,6 +2125,29 @@
         }
       }
     }
+
+    // A backgrounded tab keeps accumulating clock delta even though
+    // requestAnimationFrame is throttled, so the player used to run on (and
+    // usually die) while hidden. Pause on blur/hidden and reset the clock on
+    // resume so no time is owed to the simulation.
+    // `isPaused` itself is declared with the other state vars (~line 1500).
+    // setPaused is a hoisted function declaration, so update() may call it.
+    function setPaused(p) {
+      if (isPaused === p) return;
+      isPaused = p;
+      if (p) {
+        resetPlayerMotion();
+      } else {
+        clock.getDelta(); // drop the accumulated gap
+      }
+    }
+    window.addEventListener('blur', () => setPaused(true));
+    window.addEventListener('focus', () => setPaused(false));
+    document.addEventListener('visibilitychange', () => setPaused(document.hidden));
+    // Debug/QA hook: module-scope `let`s are not reachable from page.evaluate,
+    // so mirror the ones the behavioural tests need onto window.
+    window.__vrState = () => ({ isPaused, isSliding, gameState, distance,
+                                 playerY, playerLane, slideTimeLeft });
 
     function animate() {
       requestAnimationFrame(animate);
