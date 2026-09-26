@@ -51,7 +51,7 @@ function bypassActive() {
 }
 
 const LABEL = {
-  coins: (n) => `${n} $VIBE`,
+  coins: (n) => `${n} $VPLAY`,
   dist: (n) => `${n}m`,
 };
 

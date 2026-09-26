@@ -61,12 +61,87 @@ export const TOTAL_CHUNKS = 5;
 export const trackChunks = [];
 
 export const BILLBOARD_DATA = [
-  { main: '$VIBE', sub: 'TO THE MOON 🚀', color: '#f5a623' },
-  { main: 'ROBINHOOD', sub: 'CHAIN #46630', color: '#00e5ff' },
-  { main: 'MARGIN CALL', sub: 'NO MERCY ⚠️', color: '#ff3366' },
-  { main: 'BUY THE DIP', sub: 'WAGMI FOREVER', color: '#00ff88' },
-  { main: 'LIQUIDATION', sub: 'AVOID THE CANDLE', color: '#ff9900' },
-  { main: 'SEC CAUTION', sub: 'SLIDE UNDER LASER', color: '#7c5cff' },
+  // ── ROBINHOOD CHAIN branding ──
+  { 
+    main: 'ROBINHOOD', 
+    sub: 'CHAIN TESTNET #46630', 
+    color: '#FF3B4E',
+    accent: '#FF3B4E'
+  },
+  { 
+    main: '#46630', 
+    sub: 'JOIN THE TESTNET NOW', 
+    color: '#FF3B4E',
+    accent: '#FF3B4E'
+  },
+  
+  // ── VIBE/VIBE platform ──
+  { 
+    main: 'VIBE/VIBE', 
+    sub: 'LAUNCH · TRADE · EARN', 
+    color: '#7c5cff',
+    accent: '#7c5cff'
+  },
+  { 
+    main: 'VIBEVIBE.FUN', 
+    sub: 'TESTNET DEX ON RH CHAIN', 
+    color: '#7c5cff',
+    accent: '#7c5cff'
+  },
+  
+  // ── META ALCHEMIST ──
+  { 
+    main: 'META', 
+    sub: '@META_ALCHEMIST · VIBE/VIBE', 
+    color: '#00FF88',
+    accent: '#00FF88'
+  },
+  { 
+    main: 'ALCHEMIST', 
+    sub: 'FOLLOW @META_ALCHEMIST', 
+    color: '#00FF88',
+    accent: '#00FF88'
+  },
+  
+  // ── $VPLAY campaign ──
+  { 
+    main: '$VPLAY', 
+    sub: 'RUN · EARN · CONTRIBUTE', 
+    color: '#FFD700',
+    accent: '#FFD700'
+  },
+  { 
+    main: '$VPLAY', 
+    sub: 'vrunner.vercel.app', 
+    color: '#FFD700',
+    accent: '#FFD700'
+  },
+  { 
+    main: 'BUY $VPLAY', 
+    sub: 'ON VIBEVIBE.FUN NOW', 
+    color: '#f5a623',
+    accent: '#f5a623'
+  },
+  
+  // ── Game engagement ──
+  { 
+    main: 'REKT?', 
+    sub: 'SLIDE UNDER THE CANDLE', 
+    color: '#FF3B4E',
+    accent: '#FF3B4E'
+  },
+  { 
+    main: 'TOP RUNNER', 
+    sub: 'POST SCORE @VIBEVIBEFUN', 
+    color: '#00e5ff',
+    accent: '#00e5ff'
+  },
+  { 
+    main: 'WAGMI', 
+    sub: 'ROBINHOOD CHAIN OR REKT', 
+    color: '#00FF88',
+    accent: '#00FF88'
+  },
 ];
 let _bbIdx = 0;
 
@@ -76,43 +151,71 @@ export function makeBillboardTexture(mainText, subText, colorHex) {
   c.height = 256;
   const ctx = c.getContext('2d');
 
-  // Dark background
-  ctx.fillStyle = '#0b0e17';
+  // Pure black background
+  ctx.fillStyle = '#020305';
   ctx.fillRect(0, 0, 512, 256);
 
-  // Grid cyber pattern
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < 512; x += 32) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 256); ctx.stroke();
-  }
-  for (let y = 0; y < 256; y += 32) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
+  // Scanline texture
+  for (let y = 0; y < 256; y += 4) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0, y, 512, 2);
   }
 
-  // Neon outer border
-  ctx.strokeStyle = colorHex;
-  ctx.lineWidth = 12;
-  ctx.strokeRect(6, 6, 500, 244);
-
-  // Glow fill
-  ctx.fillStyle = colorHex + '18';
-  ctx.fillRect(12, 12, 488, 232);
-
-  // Main Text
+  // Thick colored left bar (brand stripe)
   ctx.fillStyle = colorHex;
-  ctx.font = '800 52px "Space Grotesk", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = colorHex;
-  ctx.shadowBlur = 18;
-  ctx.fillText(mainText, 256, 105);
+  ctx.fillRect(0, 0, 14, 256);
 
-  // Subtitle
-  ctx.shadowBlur = 6;
+  // Subtle color wash on right side
+  const wash = ctx.createLinearGradient(14, 0, 512, 0);
+  wash.addColorStop(0, colorHex + '22');
+  wash.addColorStop(1, 'transparent');
+  ctx.fillStyle = wash;
+  ctx.fillRect(14, 0, 498, 256);
+
+  // Top border line
+  ctx.fillStyle = colorHex;
+  ctx.fillRect(14, 0, 498, 3);
+
+  // Bottom border line
+  ctx.fillStyle = colorHex + '88';
+  ctx.fillRect(14, 253, 498, 3);
+
+  // Corner accent boxes
+  ctx.fillStyle = colorHex;
+  ctx.fillRect(14, 0, 32, 32);      // top-left
+  ctx.fillRect(480, 224, 32, 32);   // bottom-right
+  ctx.fillStyle = '#020305';
+  ctx.fillRect(16, 2, 28, 28);
+  ctx.fillRect(482, 226, 28, 28);
+
+  // Small ticker label top-right
+  ctx.fillStyle = colorHex + 'aa';
+  ctx.font = '700 13px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('ROBINHOOD CHAIN', 504, 10);
+
+  // Main text — large and impactful
+  ctx.shadowColor = colorHex;
+  ctx.shadowBlur = 24;
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 24px "JetBrains Mono", monospace';
-  ctx.fillText(subText, 256, 175);
+  ctx.font = '800 64px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(mainText, 32, 110);
+
+  // Sub text
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = colorHex;
+  ctx.font = '700 18px "JetBrains Mono", monospace';
+  ctx.fillText(subText, 32, 172);
+
+  // Glitch line (random horizontal slice)
+  if (Math.random() > 0.5) {
+    const gy = 80 + Math.floor(Math.random() * 80);
+    ctx.fillStyle = colorHex + '40';
+    ctx.fillRect(32, gy, 300 + Math.random() * 100, 2);
+  }
 
   const tex = new THREE.CanvasTexture(c);
   tex.needsUpdate = true;
@@ -186,8 +289,8 @@ export function buildRailChunk(zPos) {
   }
 
   // === REAL GLOWING BILLBOARD SIGNS ===
-  // Only spawn billboards if zPos <= -40 (avoids cluttering the lobby pedestal)
-  if (zPos <= -40) {
+  // Only spawn billboards if zPos <= -20 (avoids cluttering the lobby pedestal)
+  if (zPos <= -20) {
     const side = (_bbIdx % 2 === 0) ? -1 : 1;
     const xBase = side * 5.9;
     const bbData = BILLBOARD_DATA[_bbIdx % BILLBOARD_DATA.length];
@@ -209,6 +312,25 @@ export function buildRailChunk(zPos) {
     panelMesh.position.set(xBase, 3.8, 0);
 
     g.add(pole1, pole2, cross, panelMesh);
+
+    // Second billboard on opposite side for high-distance chunks
+    if (zPos <= -60) {
+      const side2 = side * -1; // opposite side
+      const xBase2 = side2 * 5.9;
+      const bbData2 = BILLBOARD_DATA[(_bbIdx + 3) % BILLBOARD_DATA.length];
+
+      const pole1b = vox(0.18, 4.0, 0.18, 0x2d3345, { x: xBase2, y: 2.0, z: -4 });
+      const pole2b = vox(0.18, 4.0, 0.18, 0x2d3345, { x: xBase2, y: 2.0, z: 4 });
+      const crossb = vox(0.14, 0.14, 8.2, 0x222738, { x: xBase2, y: 3.8, z: 0 });
+      const panelGeo2 = new THREE.BoxGeometry(0.18, 2.2, 4.4);
+      const tex2 = makeBillboardTexture(bbData2.main, bbData2.sub, bbData2.color);
+      const matFace2 = new THREE.MeshBasicMaterial({ map: tex2 });
+      const matSide2 = new THREE.MeshBasicMaterial({ color: 0x12151f });
+      const mats2 = [matFace2, matFace2, matSide2, matSide2, matSide2, matSide2];
+      const panelMesh2 = new THREE.Mesh(panelGeo2, mats2);
+      panelMesh2.position.set(xBase2, 3.8, 0);
+      g.add(pole1b, pole2b, crossb, panelMesh2);
+    }
   }
 
   // === FLOOR EDGE YELLOW SAFETY LINES ===

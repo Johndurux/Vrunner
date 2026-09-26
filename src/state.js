@@ -51,7 +51,7 @@ export function resetPlayerMotion() {
 
 export function updateCoinHud() {
   document.getElementById('hudCoins').textContent = String(G.sessionCoins);
-  document.getElementById('topCoins').textContent = `${G.totalSavedCoins} $VIBE`;
+  document.getElementById('topCoins').textContent = `${G.totalSavedCoins} $VPLAY`;
 }
 
 // Smooth camera transition targets. The camera lerps toward these every
