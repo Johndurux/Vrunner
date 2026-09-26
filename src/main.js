@@ -33,9 +33,32 @@ import { startRunGame, returnToLobby } from './lifecycle.js';
 import { DISTRICTS, currentDistrict, currentDistrictIndex, applyDistrict, districtChange, districtReadout } from './zones.js';
 import { dressChunk } from './deco.js';
 
-window.addEventListener('blur', () => setPaused(true));
-window.addEventListener('focus', () => setPaused(false));
-document.addEventListener('visibilitychange', () => setPaused(document.hidden));
+// ── PAUSE ──────────────────────────────────────────────────────────────────
+// Pausing had three independent listeners (blur, focus, visibilitychange) that
+// each called setPaused() with their own idea of the truth, and setPaused
+// returns early when the value is unchanged. That let the states disagree: a
+// window blur followed by a tab switch could leave the game paused after the
+// player came back, and `focus` unpaused even while a WebGL context loss was
+// still holding the game. Now every listener records its own condition and
+// then re-asks one function, so unpausing requires all conditions to clear
+// instead of whichever event happened to fire last.
+let contextLost = false;
+let windowBlurred = false;
+
+function shouldPause() {
+  // A lost context pauses regardless of focus: renderer.render() draws
+  // nothing, so the run would advance on a dead canvas. windowBlurred keeps
+  // the original behaviour of pausing when the player clicks away.
+  return windowBlurred || document.hidden || contextLost;
+}
+
+function syncPause() {
+  setPaused(shouldPause());
+}
+
+window.addEventListener('blur', () => { windowBlurred = true; syncPause(); });
+window.addEventListener('focus', () => { windowBlurred = false; syncPause(); });
+document.addEventListener('visibilitychange', syncPause);
 
 // ── WEBGL CONTEXT LOSS ─────────────────────────────────────────────────────
 // Chromium drops a WebGL context when the GPU process is overwhelmed, and the
@@ -50,7 +73,6 @@ document.addEventListener('visibilitychange', () => setPaused(document.hidden));
 // nothing at all -- no delta time to clamp. Without these handlers the run
 // silently continues on a dead canvas and the distance counter climbs anyway.
 const contextLostEl = document.getElementById('contextLost');
-let contextLost = false;
 
 function showContextNotice(show) {
   if (contextLostEl) contextLostEl.style.display = show ? 'flex' : 'none';
@@ -61,8 +83,8 @@ renderer.domElement.addEventListener('webglcontextlost', (e) => {
   // it the context is gone for good and webglcontextrestored never fires.
   e.preventDefault();
   contextLost = true;
-  setPaused(true);
   showContextNotice(true);
+  syncPause();
 }, false);
 
 renderer.domElement.addEventListener('webglcontextrestored', () => {
@@ -70,11 +92,11 @@ renderer.domElement.addEventListener('webglcontextrestored', () => {
   // every mesh in it survive, so the only thing to do is resume.
   contextLost = false;
   showContextNotice(false);
-  // Only resume if the page is actually the one being looked at. A context
-  // loss often rides along with the tab losing focus, and unpausing there
-  // would start the run again inside a tab nobody can see -- which then runs
-  // on to a game over the moment the window comes back.
-  if (!document.hidden) setPaused(false);
+  // syncPause() re-reads document.hidden itself, so a tab that is still in the
+  // background stays paused rather than unpausing itself inside a window
+  // nobody can see -- which used to run on to a game over the moment the
+  // window came back.
+  syncPause();
 }, false);
 
 /** Snapshot of the state the behavioural tests read. */

@@ -5,11 +5,12 @@
 // the swipe math uses) rather than screenX/screenY, and ignores multi-touch so
 // a pinch or a second finger cannot steer the run.
 //
+// This module owns keyboard and touch only. Every clickable button is bound
+// in ui.js bindUi(); they used to be bound here too, and one click ran both
+// copies so each button fired its handler twice. See bindInput below.
+//
 
-import { CHARACTERS } from './characters.js';
 import { audio } from './audio.js';
-import { setCharacter, roster } from './roster.js';
-import { startRunGame, returnToLobby } from './lifecycle.js';
 import { switchLane, jumpAction, slideAction, dodgeAction } from './actions.js';
 
 /** How close together two upward swipes must be to count as a dodge. */
@@ -83,19 +84,7 @@ export function bindInput() {
   // ═══════════════════════════════════════════════════════════════
   //  UI EVENT BINDINGS
   // ═══════════════════════════════════════════════════════════════
-  document.getElementById('btnPlayGame').addEventListener('click', startRunGame);
-  document.getElementById('btnRestartRun').addEventListener('click', startRunGame);
-  document.getElementById('btnBackLobby').addEventListener('click', returnToLobby);
-
-  // Character Switchers (Lobby)
-  document.getElementById('btnPrevChar').addEventListener('click', () => {
-    audio.click();
-    const nextIdx = (roster.selectedIdx - 1 + CHARACTERS.length) % CHARACTERS.length;
-    setCharacter(nextIdx);
-  });
-  document.getElementById('btnNextChar').addEventListener('click', () => {
-    audio.click();
-    const nextIdx = (roster.selectedIdx + 1) % CHARACTERS.length;
-    setCharacter(nextIdx);
-  });
+  // The button bindings live in ui.js bindUi(). They were duplicated here,
+  // so every one of them fired twice per click. The keyboard handlers below
+  // are the only thing this module should own.
 }

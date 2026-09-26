@@ -118,8 +118,28 @@ reload has to be listed in **both** — a field that is only written is silently
 reset on the next load, which is exactly the bug that shipped once already.
 
 Note `writeSave({selectedCharIdx: idx})` is called from `setCharacter()`. It
-fires on every mesh rebuild, including the boot path, so check for a write loop
-before adding another call there.
+merges one key into the existing blob, so it is one write per swap, not a loop.
+The call sits *after* the early returns on purpose: writing on the locked path
+would persist a character the player does not have equipped.
+
+## One owner per button
+
+Every clickable button is bound in **one** place: `bindUi()` in `src/ui.js`.
+`bindInput()` in `src/input.js` owns keyboard and touch only and must not
+register a `click` listener on a `btn*` id.
+
+`main.js` calls both, and the character arrows were bound in both places with
+identical bodies, so one click ran two handlers and the selection jumped two
+characters instead of one. Check for a second `getElementById('btn...')` before
+adding a binding.
+
+Pause follows the same rule. `shouldPause()` in `main.js` is the only thing
+that decides, from three recorded conditions (`windowBlurred`, `document.hidden`,
+`contextLost`); the `blur`, `focus` and `visibilitychange` listeners only record
+their own flag and re-ask. Do not call `setPaused()` from an event handler
+directly — the handlers used to disagree and the game could stick paused after
+the player came back, because `setPaused()` returns early when the value is
+unchanged and so the last writer simply won.
 
 ## Testing
 
