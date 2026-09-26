@@ -11,7 +11,7 @@
 // so the lobby can pass its preview mesh and a run passes the live one.
 import * as THREE from 'three';
 import { roster } from './roster.js';
-import { puState, runSpeedBoost, updatePowerup } from './powerups.js';
+import { puState, runSpeedBoost, updatePowerup, tickDodgeCharge } from './powerups.js';
 import { CAM_GAME, GROUND_Y, LANES } from './scene.js';
 import { updateCameraRoll, updateScreenShake, updateSpeedFov } from './camera.js';
 import { chaser } from './chaser.js';
@@ -22,6 +22,7 @@ import { updatePlayerMotion } from './player.js';
 import { advanceTrack } from './track.js';
 import { updateCollisions } from './collision.js';
 import { animateScenery } from './deco.js';
+import { updateDayNight } from './daynight.js';
 import { applyDistrict } from './zones.js';
 import { trackChunks, scene } from './scene.js';
 
@@ -56,13 +57,16 @@ function stepRun(dt, t, mesh) {
       G.slideTimeLeft = 0;
     }
   }
-  // The hoverboard adds 20% on top of the G.distance-scaled speed. The
+  // BULL RUN BOOST adds 15% on top of the G.distance-scaled speed. The
   // speed cap moves out while it is active so the boost cannot push the
   // scene past what the track spawner can keep up with.
-  const cap = puState.powerup && puState.powerup.type === 'hoverboard' ? 43 : 36;
+  const cap = puState.powerup && puState.powerup.type === 'boost' ? 43 : 36;
   G.runSpeed = Math.min(cap, (18 + (G.distance / 120)) * runSpeedBoost());
   const moveZ = G.runSpeed * dt;
   G.distance += moveZ;
+  // REKT DODGE charges are earned by distance, not by a timer, so this is the
+  // only place that has to know the distance moved.
+  tickDodgeCharge(G.distance);
 
   document.getElementById('hudDistance').innerHTML = `${Math.floor(G.distance)}<span>m</span>`;
 
@@ -72,9 +76,13 @@ function stepRun(dt, t, mesh) {
     updateCollisions(dt, moveZ, mesh);
 
     // Camera tracks the player, lifted by the jump arc.
-  G.camTargetPos.x = roster.mesh.position.x * 0.4;
+  // 0.55 rather than 0.4: at 0.4 the player drifted to the frame edge in the
+  // outer lanes and was visibly clipped on narrow portrait screens.
+  G.camTargetPos.x = roster.mesh.position.x * 0.55;
   G.camTargetPos.y = CAM_GAME.y + (G.playerY * 0.4);
-  G.camTargetLook.x = roster.mesh.position.x * 0.2;
+  // The look target follows a little less than the position does. Matching it
+  // exactly would swing the whole horizon when changing lanes.
+  G.camTargetLook.x = roster.mesh.position.x * 0.3;
   G.camTargetLook.y = CAM_GAME.lookY + (G.playerY * 0.25);
 }
 
@@ -143,6 +151,11 @@ export function update(dt, mesh) {
 
   // Scenery blinkers and the sky palette are cosmetic, so they live at the
   // end of the pass: if the run ended this frame, they still settle.
+  // Day/night writes the base sky, fog and lights; the district then tints
+  // them. The order matters: the cycle has to go first, or the tint applied
+  // earlier in advanceTrack() would be overwritten and every district would
+  // look identical.
+  updateDayNight(dt);
   applyDistrict(scene, scene.fog);
   animateScenery(trackChunks, t);
 }

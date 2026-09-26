@@ -10,6 +10,7 @@ import { LANES } from './scene.js';
 import { activeObstacles } from './obstacles.js';
 import { audio } from './audio.js';
 import { roster } from './roster.js';
+import { triggerDodge, canDodge, DODGE_IFRAME } from './powerups.js';
 
 export function switchLane(dir) {
   if (G.gameState !== 'RUNNING') return;
@@ -79,4 +80,36 @@ export function slideAction() {
       }
     });
   }
+}
+
+/**
+ * REKT DODGE: dash to any lane instantly, with a short window of invulnerability.
+ *
+ * The lane argument is the lane the player is steering toward, not a cycle
+ * count: dodging left from lane 2 lands in lane 1, and dodging left again
+ * from lane 1 lands in lane 0, so the gesture always goes where the player was
+ * already heading. The dodge itself is charged, not timed, so the whole thing
+ * is a no-op without a charge.
+ *
+ * @param {number} dir  -1 for the lane to the left, +1 for the right
+ * @returns {boolean} true if a dodge was spent
+ */
+export function dodgeAction(dir) {
+  if (G.gameState !== 'RUNNING') return false;
+  if (!canDodge()) return false;
+
+  // Already at the edge: dodge in place rather than refusing, because the
+  // charge is the thing the player paid for and losing it to a no-op at the
+  // wall lane would read as a bug.
+  const target = THREE.MathUtils.clamp(G.playerLane + dir, 0, 2);
+  if (!triggerDodge(target)) return false;
+
+  // Commit the lane at once. The mesh is snapped by the dash, so waiting for
+  // the normal 14*dt lerp would leave the player visually behind the obstacle
+  // they just paid to pass through.
+  G.playerLane = target;
+  G.targetX = LANES[target];
+  roster.mesh.position.x = LANES[target];
+  audio.dodge();
+  return true;
 }

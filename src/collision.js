@@ -21,6 +21,57 @@ import { triggerGameOver } from './lifecycle.js';
 const playerBox = new THREE.Box3();
 
 /**
+ * Opacity has to be set on a material, and the material cache in voxel.js
+ * hands the SAME instance to every red candle -- so fading there would make
+ * all of them blink together. Each obstacle therefore gets a private clone of
+ * its materials the first time it is asked to fade. The clone is not flagged
+ * shared, so disposeObject() frees it when the obstacle is recycled.
+ * @param {THREE.Object3D} obj
+ * @returns {void}
+ */
+function makeFadeable(obj) {
+  obj.traverse((child) => {
+    if (!child.isMesh || !child.material || child.userData.__ownMat) return;
+    const src = Array.isArray(child.material) ? child.material : [child.material];
+    const own = src.map(m => {
+      const c = m.clone();
+      c.transparent = true;
+      return c;
+    });
+    child.material = Array.isArray(child.material) ? own : own[0];
+    child.userData.__ownMat = true;
+  });
+}
+
+/**
+ * Fade an obstacle as it nears the camera, then let the normal disposal rule
+ * take it away.
+ *
+ * The player used to see obstacles swell up and fill the frame right before
+ * they vanished: disposal was at z > 8 while the camera sits at z = 7.8, so an
+ * obstacle was still fully drawn right beside the lens. Fading it out over the
+ * last few metres removes the pop without moving the disposal point, which the
+ * swept collision test depends on.
+ * @param {THREE.Object3D} obs
+ * @param {number} z  current z
+ * @returns {void}
+ */
+function fadeObstacle(obs, z) {
+  // Fully visible at 4m out, gone by the time it passes the camera.
+  const t = Math.max(0, Math.min(1, (z - 0.5) / 3.5));
+  const a = t * t; // ease in, so the last metre dissolves instead of blinking
+  if (t < 0.999) makeFadeable(obs);
+  obs.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    for (const m of mats) {
+      if (child.userData.__ownMat) m.opacity = a;
+    }
+  });
+}
+
+
+/**
  * Advance every obstacle and collectable by `moveZ`, then resolve hits.
  * @param {number} dt  frame delta in seconds, already clamped
  * @param {number} moveZ  world units travelled this frame
@@ -48,6 +99,8 @@ export function updateCollisions(dt, moveZ, mesh) {
     // below therefore runs against the whole travelled interval.
     const zPrev = obs.position.z;
     obs.position.z += moveZ;
+    // Dissolve on the way past the camera, before disposal.
+    if (obs.position.z > 0.5) fadeObstacle(obs, obs.position.z);
 
     // If obstacle already cleared, skip collision
     if (obs.userData.cleared) {
@@ -109,11 +162,15 @@ export function updateCollisions(dt, moveZ, mesh) {
 
     // Direct crash!
     if (sameLane && inHitZone) {
-      // Hoverboard absorbs exactly one collision, then breaks.
-      if (puState.hoverboardHitsLeft > 0) {
-        puState.hoverboardHitsLeft--;
+      // DIAMOND HANDS SHIELD absorbs exactly one collision, then breaks.
+      // The 0.3s dodge i-frames sit in front of this: during a REKT DODGE
+      // dash the player passes straight through obstacles, which is the whole
+      // point of spending a charge on a combo.
+      if (puState.iframeLeft > 0) continue;
+      if (puState.shieldHitsLeft > 0) {
+        puState.shieldHitsLeft--;
         obs.userData.cleared = true;
-        if (puState.hoverboardHitsLeft === 0 && puState.shieldGlow) puState.shieldGlow.visible = false;
+        if (puState.shieldHitsLeft === 0 && puState.shieldGlow) puState.shieldGlow.visible = false;
         triggerScreenShake(0.18, 0.45);
         audio.crash();
         continue;

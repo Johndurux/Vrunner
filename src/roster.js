@@ -13,8 +13,10 @@ import { writeSave, loadSave } from './save.js';
 import { isUnlocked } from './unlock.js';
 
 export const lobbyStage = new THREE.Group();
-export const pedestal = vox(3.2, 0.5, 3.2, 0x181c28, { y: 0.45 });
-export const pedRing = vox(3.4, 0.1, 3.4, 0xe0643a, { y: 0.72 });
+// Kept small on purpose: at 3.2u across it filled most of a portrait viewport
+// and the ring's edge cut across the character's feet.
+export const pedestal = vox(2.1, 0.36, 2.1, 0x181c28, { y: 0.32 });
+export const pedRing = vox(2.25, 0.08, 2.25, 0xe0643a, { y: 0.5 });
 pedRing.material = new THREE.MeshBasicMaterial({ color: 0xe0643a });
 lobbyStage.add(pedestal, pedRing);
 scene.add(lobbyStage);

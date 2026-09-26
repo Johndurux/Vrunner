@@ -15,14 +15,15 @@ import { audio } from './audio.js';
 import { camFeel, resetCameraFeel } from './camera.js';
 import { clearEntityList } from './utils.js';
 import { createTrumpChaser, chaser } from './chaser.js';
-import { expirePowerup, puState } from './powerups.js';
+import { resetPowerups, expirePowerup } from './powerups.js';
 import { loadSave, writeSave } from './save.js';
 import { rosterStatus } from './unlock.js';
 import { renderLeaderboard } from './ui.js';
 import { setCharacter, lobbyStage } from './roster.js';
 import { spawnRow } from './spawn.js';
 import { redressScenery } from './track.js';
-import { applyDistrict, currentDistrictIndex } from './zones.js';
+import { currentDistrictIndex } from './zones.js';
+import { resetDayNight } from './daynight.js';
 
 /**
  * Fill the track pool on first boot. The original single-file build did this
@@ -39,7 +40,10 @@ function buildTrackPool() {
     trackChunks.push(buildRailChunk(-i * CHUNK_LEN));
   }
   redressScenery(currentDistrictIndex());
-  applyDistrict(scene, scene.fog);
+  // The day/night cycle owns the sky, fog and lights; districts only pick the
+  // decor. Resetting the cycle here is what makes every run open in the same
+  // light instead of resuming wherever the last one finished.
+  resetDayNight();
 }
 
 export function startRunGame() {
@@ -64,10 +68,10 @@ export function startRunGame() {
   // has not crossed a boundary yet.
   G.districtIdx = 0;
   updateCoinHud();
-  // Clear any power-up left over from the previous run, and reset the
-  // hoverboard shield so a new run never starts with a free hit.
-  expirePowerup();
-  puState.spawnDebt = 20;
+  // Clear everything the previous run left behind: the active power-up, the
+  // shield's free hit, the REKT DODGE charges and the spawn schedule. A new
+  // run must never inherit a shield or a charge it did not earn.
+  resetPowerups();
   // resetCameraFeel() clears the shake and snaps the FOV back to rest.
   resetCameraFeel();
   roster.mesh.rotation.y = Math.PI;
@@ -83,6 +87,10 @@ export function startRunGame() {
   chaser.mesh = createTrumpChaser();
   chaser.mesh.rotation.y = Math.PI;
   chaser.mesh.position.set(0, GROUND_Y, 2.3); // Runs directly behind the player in the same lane!
+  // TEMP-ish: hidden through the lobby->game camera move. At z=2.3 the chaser
+  // sits between the lobby and game cameras, so while the camera lerps it
+  // fills the frame and hides the track. Revealed only once the run is live.
+  chaser.mesh.visible = false;
   scene.add(chaser.mesh);
   chaser.active = true;
   chaser.phase = 0;
@@ -95,6 +103,9 @@ export function startRunGame() {
     G.runStartTimer = null;
     if (G.gameState === 'TRANSITION') {
       G.gameState = 'RUNNING';
+      // The camera has finished its move, so the chaser can no longer eclipse
+      // the track on its way to position.
+      if (chaser.mesh) chaser.mesh.visible = true;
       document.getElementById('gameHUD').classList.add('active');
     }
   }, 700);

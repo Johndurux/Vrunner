@@ -25,6 +25,9 @@ export const G = {
   totalSavedCoins: 0,
   bestDist: 0,
   selectedCharIdx: 0,
+  // Metres per day/night half-cycle; daynight.js reads this instead of its own
+  // constant so the cycle can be tuned from the one state object.
+  dayNightSpan: 350,
   // Scenery. zoneSpan is metres per district, districtIdx is the district the
   // run is currently dressed in, and nextDistrict is the index to swap to the
   // moment the run crosses the boundary. Keeping them in G is what lets the

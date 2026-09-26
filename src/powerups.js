@@ -1,7 +1,19 @@
 // ═══════════════════════════════════════════════════════════════
-//  POWER-UPS
+//  POWER-UPS -- Web3 flavour
 //  Durasi dihitung dari game time (dt), bukan setTimeout, supaya
 //  power-up nggak berkurang durasinya ketika player pause.
+//
+//  Namanya dirombak dari padanan Subway Surfers (hoverboard /
+//  magnet / multiplier) jadi versi bertema crypto, tapi mekaniknya
+//  tetap sama supaya tidak mengubah sistem yang sudah jalan:
+//    - DIAMOND HANDS SHIELD  (ganti hoverboard) -- kebal 1x tabrakan
+//    - WHALE MAGNET          (ganti magnet)     -- tarik koin
+//    - BULL RUN BOOST        (ganti multiplier) -- koin 2x + speed +15%
+//    - REKT DODGE            (skill baru)       -- dash lane, sekali/run
+//
+//  Semua state hidup di puState, di-mutate in place. `export let`
+//  akan bikin importer baca binding lama, jadi getter dipakai untuk
+//  nilai yang bisa berubah seluruhnya (powerup, shieldGlow, charges).
 // ═══════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
@@ -10,35 +22,105 @@ import { audio } from './audio.js';
 import { scene, LANES } from './scene.js';
 import { vox } from './voxel.js';
 
-export const POWERUP_DUR = { hoverboard: 8, magnet: 6, multiplier: 10 };
-// Live state. These are mutated in place (a pickup sets `powerup`, the
-// countdown decrements `timeLeft`), so they live behind a tiny store with
-// getters: an `export let` would leave importers reading a stale binding.
-export const puState = {
-  powerup: null,           // { type, timeLeft }
-  hoverboardHitsLeft: 0,   // obstacle crashes the board can absorb
-  shieldGlow: null,        // additive glow mesh under the player's feet
-  spawnDebt: 20            // rows until the next power-up rolls
+// Durasi tiap power-up, dalam detik game-time.
+export const POWERUP_DUR = {
+  shield: 8,    // DIAMOND HANDS SHIELD
+  magnet: 6,    // WHALE MAGNET
+  boost: 10,    // BULL RUN BOOST
 };
-export const getPowerup = () => puState.powerup;
-export const getShieldGlow = () => puState.shieldGlow;
-export const getHoverboardHits = () => puState.hoverboardHitsLeft;
 
-export function createHoverboard() {
+// Label + warna untuk HUD, dipisah supaya updatePowerupHud() tidak
+// menebak-nebak dari nama type.
+const PU_META = {
+  shield: { label: 'DIAMOND HANDS', color: '#4dd8ff', icon: '◆' },
+  magnet: { label: 'WHALE MAGNET', color: '#ff5cd6', icon: '🐋' },
+  boost:  { label: 'BULL RUN', color: '#4dff9e', icon: '▲' },
+};
+
+// ── REKT DODGE: chargekeeper ───────────────────────────────────────────────
+// Setiap 200m dapat 1 charge, maksimal 2. Dipakai lewat dash instantaneous
+// ke lane mana pun sambil kebal tabrakan selama 0.3 detik.
+export const DODGE_SPAN = 200;    // meter per charge
+export const DODGE_MAX = 2;      // charge maksimum sekaligus
+export const DODGE_IFRAME = 0.3; // detik kebal setelah dash
+const DODGE_DASH_TIME = 0.22;    // durasi animasi dash-nya
+
+/**
+ * Live state. Semua di-mutate in place (pickup set `powerup`, countdown
+ * decrement `timeLeft`), jadi lived di belakang store kecil dengan getter.
+ * @typedef {{type:string,timeLeft:number}} ActivePowerup
+ */
+export const puState = {
+  powerup: null,        // { type, timeLeft }
+  shieldHitsLeft: 0,    // obstacle crash yang bisa diserap shield
+  shieldGlow: null,     // trail/halo biru berkilau di sekitar karakter
+  spawnDebt: 20,        // row sampai power-up berikutnya di-roll
+  // REKT DODGE
+  dodgeCharges: 0,      // charge tersisa (maks DODGE_MAX)
+  dashing: false,       // sedang di tengah animasi dash
+  dashTimeLeft: 0,
+  dashTargetX: 0,       // lane tujuan selama dash
+  iframeLeft: 0,        // sisa durasi kebal tabrakan
+};
+
+/** @returns {ActivePowerup|null} power-up yang sedang aktif */
+export const getPowerup = () => puState.powerup;
+
+/** @returns {THREE.Object3D|null} mesh glow shield, kalau ada */
+export const getShieldGlow = () => puState.shieldGlow;
+
+/**
+ * Sisa tabrakan yang bisa diserap power-up per-tabrakan.
+ *
+ * Di-rename dari getHoverboardHits -> getShieldHits, tapi nama lama
+ * dipertahankan sebagai alias karena collision.js masih memakainya.
+ * @returns {number}
+ */
+export const getShieldHits = () => puState.shieldHitsLeft;
+
+/** @deprecated alias ke getShieldHits, dipakai collision.js. @returns {number} */
+export const getHoverboardHits = () => puState.shieldHitsLeft;
+
+/** @returns {number} charge REKT DODGE yang tersisa */
+export const getDodgeCharges = () => puState.dodgeCharges;
+
+// ── Mesh pickup ────────────────────────────────────────────────────────────
+
+/**
+ * DIAMOND HANDS SHIELD -- kristal berlapis di atas alas, warna cyan.
+ * Dipakai sebagai pengganti hoverboard di Sinai.
+ * @returns {THREE.Group}
+ */
+export function createShield() {
   const g = new THREE.Group();
-  g.userData = { type: 'hoverboard', box: new THREE.Box3(), collected: false };
-  const deck = vox(1.25, 0.13, 2.0, 0x22e0c8, { y: 0.72 });
-  deck.material = new THREE.MeshStandardMaterial({
-    color: 0x22e0c8, emissive: 0x0fbfa8, emissiveIntensity: 0.85,
-    metalness: 0.4, roughness: 0.35
+  g.userData = { type: 'shield', box: new THREE.Box3(), collected: false };
+  // Alas: slab gelap, tipped sedikit, sebagai "alas display".
+  const base = vox(0.9, 0.1, 0.9, 0x0e2430, { y: 0.72 });
+  base.material = new THREE.MeshStandardMaterial({
+    color: 0x0e2430, emissive: 0x08202c, emissiveIntensity: 0.5,
+    metalness: 0.6, roughness: 0.4
   });
-  const nose = vox(0.9, 0.1, 0.4, 0x9ffff0, { y: 0.8, z: -0.95 });
-  const finL = vox(0.1, 0.3, 0.5, 0x0fbfa8, { y: 0.95, x: -0.5 });
-  const finR = vox(0.1, 0.3, 0.5, 0x0fbfa8, { y: 0.95, x: 0.5 });
-  g.add(deck, nose, finL, finR);
+  // Empat kristal kecil mengelilingi inti, seperti diamond hands (genggaman).
+  const gem = new THREE.MeshStandardMaterial({
+    color: 0x4dd8ff, emissive: 0x2ba8e0, emissiveIntensity: 1.0,
+    metalness: 0.7, roughness: 0.15, transparent: true, opacity: 0.92
+  });
+  const c1 = vox(0.34, 0.34, 0.34, 0x4dd8ff, { y: 1.05, x: -0.2, z: -0.2 });
+  const c2 = vox(0.34, 0.34, 0.34, 0x4dd8ff, { y: 1.05, x: 0.2, z: -0.2 });
+  const c3 = vox(0.34, 0.34, 0.34, 0x4dd8ff, { y: 1.05, x: -0.2, z: 0.2 });
+  const c4 = vox(0.34, 0.34, 0.34, 0x4dd8ff, { y: 1.05, x: 0.2, z: 0.2 });
+  [c1, c2, c3, c4].forEach(c => { c.material = gem; });
+  // Inti yang lebih terang di tengah.
+  const core = vox(0.3, 0.5, 0.3, 0xbdf1ff, { y: 1.2 });
+  core.material = gem;
+  g.add(base, c1, c2, c3, c4, core);
   return g;
 }
 
+/**
+ * WHALE MAGNET -- magnet besar bertema paus, penggant magnet.
+ * @returns {THREE.Group}
+ */
 export function createMagnet() {
   const g = new THREE.Group();
   g.userData = { type: 'magnet', box: new THREE.Box3(), collected: false };
@@ -47,57 +129,122 @@ export function createMagnet() {
     color: 0xff5cd6, emissive: 0xff2bb5, emissiveIntensity: 0.9,
     metalness: 0.5, roughness: 0.25
   });
-  // U-shaped magnet body: two uprights joined by a crossbar.
+  // Badan magnet: dua tiang + palang atas (bentuk U).
   const armL = vox(0.16, 0.7, 0.16, 0xe0e6f0, { y: 1.0, x: -0.34, z: -0.2 });
   const armR = vox(0.16, 0.7, 0.16, 0xe0e6f0, { y: 1.0, x: 0.34, z: -0.2 });
   const bar = vox(0.84, 0.16, 0.16, 0xe0e6f0, { y: 1.32, z: -0.2 });
   const tipL = vox(0.18, 0.16, 0.18, 0xff5cd6, { y: 0.68, x: -0.34, z: -0.2 });
   const tipR = vox(0.18, 0.16, 0.18, 0xff5cd6, { y: 0.68, x: 0.34, z: -0.2 });
-  g.add(core, armL, armR, bar, tipL, tipR);
+  // Ekor "whale" (paus) kecil di belakang, biar tema magnet paus terbaca.
+  const tail = vox(0.1, 0.34, 0.1, 0xff2bb5, { y: 1.3, z: 0.42, x: 0 });
+  tail.rotation.x = 0.5;
+  g.add(core, armL, armR, bar, tipL, tipR, tail);
   return g;
 }
 
-export function createMultiplier() {
+/**
+ * BULL RUN BOOST -- candlestick hijau, pengganti multiplier.
+ * @returns {THREE.Group}
+ */
+export function createBoost() {
   const g = new THREE.Group();
-  g.userData = { type: 'multiplier', box: new THREE.Box3(), collected: false };
-  const body = vox(0.85, 0.85, 0.22, 0x7c5cff, { y: 0.95 });
+  g.userData = { type: 'boost', box: new THREE.Box3(), collected: false };
+  // Badan candlestick: kotak tinggi.
+  const body = vox(0.6, 1.0, 0.4, 0x1e5a3a, { y: 1.0 });
   body.material = new THREE.MeshStandardMaterial({
-    color: 0x7c5cff, emissive: 0x5a3cff, emissiveIntensity: 0.9,
-    metalness: 0.45, roughness: 0.3
+    color: 0x1e5a3a, emissive: 0x0e3a20, emissiveIntensity: 0.6,
+    metalness: 0.3, roughness: 0.5
   });
-  // Stylised "x2" from plain voxels: a diagonal bar plus a 2.
-  const slash = vox(0.12, 0.5, 0.06, 0xffffff, { y: 0.95, z: 0.16 });
-  slash.rotation.z = 0.6;
-  const d1 = vox(0.3, 0.11, 0.06, 0xffffff, { y: 1.22, x: 0.18, z: 0.16 });
-  const d2 = vox(0.3, 0.11, 0.06, 0xffffff, { y: 0.96, x: 0.18, z: 0.16 });
-  const d3 = vox(0.11, 0.3, 0.06, 0xffffff, { y: 0.83, x: 0.32, z: 0.16 });
-  g.add(body, slash, d1, d2, d3);
+  // Sumbu naik-hijau: bar tinggi berwarna hijau neon.
+  const wickUp = vox(0.3, 0.5, 0.3, 0x4dff9e, { y: 1.75 });
+  wickUp.material = new THREE.MeshStandardMaterial({
+    color: 0x4dff9e, emissive: 0x2bd86b, emissiveIntensity: 1.1,
+    metalness: 0.2, roughness: 0.3
+  });
+  // "Body" candlestick (batang naik) highlight.
+  const bodyLit = vox(0.42, 0.36, 0.34, 0x8dffc0, { y: 0.95 });
+  bodyLit.material = new THREE.MeshBasicMaterial({ color: 0x8dffc0 });
+  // Sumbu bawah pendek.
+  const wickDown = vox(0.2, 0.2, 0.2, 0x2bd86b, { y: 0.4 });
+  g.add(body, wickUp, wickDown, bodyLit);
   return g;
 }
 
+/**
+ * REKT DODGE -- ikon panah ke atas/bawah, hilang dari pickup lane
+ * (dipanggil via double-tap, bukan lewat jalan), jadi tidak dipakai
+ * sebagai item lahur. Fungsi ini tetap ada supaya type-nya dikenal
+ * kalau mau spawn manual.
+ * @returns {THREE.Group}
+ */
+export function createDodge() {
+  const g = new THREE.Group();
+  g.userData = { type: 'boost', box: new THREE.Box3(), collected: false };
+  const core = vox(0.5, 0.5, 0.5, 0xf5a623, { y: 0.95 });
+  core.material = new THREE.MeshStandardMaterial({
+    color: 0xf5a623, emissive: 0xd07a10, emissiveIntensity: 0.8,
+    metalness: 0.5, roughness: 0.3
+  });
+  g.add(core);
+  return g;
+}
+
+/** Builder tiap power-up, di-index oleh type. */
 export const POWERUP_FACTORY = {
-  hoverboard: createHoverboard,
+  shield: createShield,
   magnet: createMagnet,
-  multiplier: createMultiplier
+  boost: createBoost,
 };
 
+// ── Shield glow (DIAMOND HANDS) ────────────────────────────────────────────
+
+/**
+ * Halo/trail biru berkilau yang muncul di sekitar karakter saat
+ * DIAMOND HANDS SHIELD aktif. Bertindak sebagai mesh additive yang
+ * berputar & berdenyut.
+ * @returns {THREE.Mesh}
+ */
 export function makeShieldGlow() {
-  const geo = new THREE.PlaneGeometry(3.0, 3.0);
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0x22e0c8, transparent: true, opacity: 0.28,
+  const grp = new THREE.Group();
+  // Cincin cyan besar, additive, seolah aura.
+  const ringGeo = new THREE.PlaneGeometry(3.0, 3.0);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x4dd8ff, transparent: true, opacity: 0.26,
     blending: THREE.AdditiveBlending, depthWrite: false
   });
-  const m = new THREE.Mesh(geo, mat);
-  m.rotation.x = -Math.PI / 2;
-  m.position.y = 0.06;
-  m.visible = false;
-  return m;
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.06;
+  // Partikel kecil mengelilingi pemain sebagai "berkilau".
+  const sparkMat = new THREE.MeshBasicMaterial({
+    color: 0xbdf1ff, transparent: true, opacity: 0.9,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const sparks = [];
+  for (let i = 0; i < 6; i++) {
+    const sp = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16), sparkMat);
+    sp.userData = { a: (i / 6) * Math.PI * 2, r: 0.7 + Math.random() * 0.3, y: 0.5 + Math.random() * 0.6 };
+    sparks.push(sp);
+    grp.add(sp);
+  }
+  ring.userData.ring = true;
+  grp.add(ring);
+  grp.userData = { sparks, ring, ringMat, sparkMat };
+  grp.visible = false;
+  return grp;
 }
 
+/**
+ * Pasang power-up yang baru saja dipicu ke state + pasang glow-nya.
+ * @param {string} type  'shield' | 'magnet' | 'boost'
+ * @returns {void}
+ */
 export function activatePowerup(type) {
   puState.powerup = { type, timeLeft: POWERUP_DUR[type] };
-  if (type === 'hoverboard') {
-    puState.hoverboardHitsLeft = 1;
+  if (type === 'shield') {
+    // Shield ini direkomendasikan satu kali saja: 1 tabrakan. Prompt
+    // -- "pemain kebal 1x tabrakan selama 8 detik".sekali saja; kalau habis, glow mati.
+    puState.shieldHitsLeft = 1;
     if (!puState.shieldGlow) {
       puState.shieldGlow = makeShieldGlow();
       scene.add(puState.shieldGlow);
@@ -108,48 +255,155 @@ export function activatePowerup(type) {
   updatePowerupHud();
 }
 
+/**
+ * Akhiri power-up aktif + matikan glow-nya.
+ * @returns {void}
+ */
 export function expirePowerup() {
   puState.powerup = null;
-  puState.hoverboardHitsLeft = 0;
+  puState.shieldHitsLeft = 0;
   if (puState.shieldGlow) puState.shieldGlow.visible = false;
   updatePowerupHud();
 }
 
+/**
+ * Reset semua state power-up, termasuk charge REKT DODGE. Dipanggil
+ * di awal run supaya charge & timer tidak nyisa dari run sebelumnya.
+ * @returns {void}
+ */
+export function resetPowerups() {
+  puState.powerup = null;
+  puState.shieldHitsLeft = 0;
+  puState.dodgeCharges = 0;
+  puState.dashing = false;
+  puState.dashTimeLeft = 0;
+  puState.iframeLeft = 0;
+  puState.spawnDebt = 20;
+  if (puState.shieldGlow) puState.shieldGlow.visible = false;
+  updatePowerupHud();
+  updateDodgeHud();
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────
+
+/**
+ * Perbarui badge power-up di HUD: icon + label + countdown.
+ * @returns {void}
+ */
 export function updatePowerupHud() {
   const el = document.getElementById('hudPowerup');
   const box = document.getElementById('hudPowerupBox');
   if (!el || !box) return;
   if (!puState.powerup) { box.style.display = 'none'; return; }
   box.style.display = 'block';
-  el.textContent = `${puState.powerup.type === 'multiplier' ? 'x2 ' : ''}${puState.powerup.timeLeft.toFixed(1)}s`;
-  el.style.color = puState.powerup.type === 'hoverboard' ? '#22e0c8'
-    : puState.powerup.type === 'magnet' ? '#ff5cd6' : '#7c5cff';
+  const meta = PU_META[puState.powerup.type] || { label: 'BOOST', color: '#fff', icon: '★' };
+  el.textContent = `${meta.icon} ${meta.label} ${puState.powerup.timeLeft.toFixed(1)}s`;
+  el.style.color = meta.color;
 }
 
 /**
- * Tick the active power-up: run its timer, refresh the HUD badge, and apply
- * its per-frame effect.
+ * Perbarui indikator charge REKT DODGE (2 titik kecil terpisah di HUD).
+ * @returns {void}
+ */
+export function updateDodgeHud() {
+  const box = document.getElementById('hudDodgeBox');
+  const el = document.getElementById('hudDodge');
+  if (!el || !box) return;
+  box.style.display = 'block';
+  // Dua titik: terisi = charge tersedia, kosong = sudah dipakai.
+  const filled = puState.dodgeCharges;
+  el.textContent = '◆◆'.slice(0, filled) + '◇◇'.slice(0, DODGE_MAX - filled);
+  el.style.color = filled > 0 ? '#f5a623' : 'rgba(255,255,255,0.3)';
+}
+
+// ── REKT DODGE: dash ke lane ───────────────────────────────────────────────
+
+/**
+ * Pemicu dash REKT DODGE. Memindahkan pemain ke lane yang diminta
+ * secara instan & memberi iframe 0.3 detik. Mengembalikan true kalau
+ * dash benar-benar terjadi.
+ *
+ * Lane tujuan dikunci ke lane valid terdekat. Kalau tidak ada charge
+ * atau sedang dash, tidak terjadi apa-apa.
+ * @param {number} targetLaneIdx  index lane tujuan (0,1,2)
+ * @returns {boolean} true kalau dash terjadi
+ */
+export function triggerDodge(targetLaneIdx) {
+  if (puState.dodgeCharges <= 0) return false;
+  if (puState.dashing) return false;
+  puState.dodgeCharges--;
+  puState.dashing = true;
+  puState.dashTimeLeft = DODGE_DASH_TIME;
+  puState.dashTargetX = LANES[targetLaneIdx];
+  puState.iframeLeft = DODGE_IFRAME;
+  audio.powerup();
+  updateDodgeHud();
+  return true;
+}
+
+/**
+ * Can the player dodge right now? Dipakai input.js untuk mengaktifkan
+ * tombol / double-tap.
+ * @returns {boolean}
+ */
+export function canDodge() {
+  return puState.dodgeCharges > 0 && !puState.dashing;
+}
+
+// ── Tick per-frame ────────────────────────────────────────────────────────
+
+/**
+ * Tick semua power-up: run timer, refresh HUD, terapkan efek per-frame,
+ * dan kelola REKT DODGE (charge meter + dash + iframe).
+ *
  * @param {number} dt  frame delta in seconds, already clamped
  * @param {number} playerX  the player's committed lane x
  * @param {number} playerZ  the player's z on the track
  * @returns {void}
  */
 export function updatePowerup(dt, playerX, playerZ) {
+  // REKT DODGE dash: blend ke lane tujuan, selesai dalam dashTimeLeft.
+  if (puState.dashing) {
+    puState.dashTimeLeft -= dt;
+    if (puState.dashTimeLeft <= 0) {
+      puState.dashing = false;
+      puState.dashTimeLeft = 0;
+    }
+  }
+  // Iframe (kebal sesaat) Regardless dash, hitung mundur.
+  if (puState.iframeLeft > 0) {
+    puState.iframeLeft -= dt;
+    if (puState.iframeLeft < 0) puState.iframeLeft = 0;
+  }
+
   if (!puState.powerup) return;
   puState.powerup.timeLeft -= dt;
   if (puState.powerup.timeLeft <= 0) { expirePowerup(); return; }
   updatePowerupHud();
 
-  // Hoverboard speed boost is applied in the speed calc (see runSpeedBoost).
+  // DIAMOND HANDS: glow biru berputar + denyut.
   if (puState.shieldGlow && puState.shieldGlow.visible) {
-    puState.shieldGlow.position.x = playerX;
-    puState.shieldGlow.material.opacity = 0.22 + Math.sin(performance.now() / 160) * 0.09;
+    const g = puState.shieldGlow;
+    g.position.x = playerX;
+    const t = performance.now() / 1000;
+    const d = g.userData;
+    // Ring denyut & berputar.
+    d.ring.rotation.z = t * 1.4;
+    d.ringMat.opacity = 0.20 + Math.sin(t * 4) * 0.08;
+    // Partikel berputar mengelilingi pemain.
+    for (const sp of d.sparks) {
+      const a = sp.userData.a + t * 2.2;
+      sp.position.set(
+        playerX + Math.cos(a) * sp.userData.r,
+        sp.userData.y,
+        playerZ + Math.sin(a) * sp.userData.r
+      );
+      sp.lookAt(playerX, sp.userData.y, playerZ + 20);
+    }
   }
 
-  // Coin magnet: pull nearby coins to the player, then let the normal
-  // intersectsBox pickup in updateCollisions() collect them. The pull is on
-  // the x/z plane the coins actually travel in; `playerZ` is the player's z,
-  // NOT their jump height.
+  // WHALE MAGNET: tarik koin ke pemain (x/z plane), lalu pickup normal
+  // di collision.js yang.collect. Radius 10m.
   if (puState.powerup.type === 'magnet') {
     for (let i = activeItems.length - 1; i >= 0; i--) {
       const it = activeItems[i];
@@ -166,8 +420,29 @@ export function updatePowerup(dt, playerX, playerZ) {
   }
 }
 
+/**
+ * Tick berbasis jarak: menambah charge REKT DODGE setiap DODGE_SPAN
+ * meter. Dipanggil dari update.js tiap frame dengan G.distance.
+ * @param {number} distance  total jarak dalam meter
+ * @returns {void}
+ */
+export function tickDodgeCharge(distance) {
+  // Dodge debt juga berbasis jarak, bukan real-time. Full cycle: satu
+  // charge per DODGE_SPAN meter, maksimal DODGE_MAX charge.
+  const earned = Math.floor((distance || 0) / DODGE_SPAN);
+  const want = Math.min(DODGE_MAX, earned);
+  if (want > puState.dodgeCharges) {
+    puState.dodgeCharges = want;
+    updateDodgeHud();
+  }
+}
+
+/**
+ * Kecepatan lari selama power-up boost.
+ * @returns {number} multiplier (1 = normal)
+ */
 export function runSpeedBoost() {
-  return puState.powerup && puState.powerup.type === 'hoverboard' ? 1.2 : 1;
+  return puState.powerup && puState.powerup.type === 'boost' ? 1.15 : 1;
 }
 
 // Hard combo used past 800m: a tall wall you must jump, with a low beam
@@ -200,13 +475,21 @@ function createComboGate() {
   return g;
 }
 
+/**
+ * Nilai koin per pickup. BULL RUN BOOST memberi 2x.
+ * @returns {number} 1 atau 2
+ */
 export function coinValue() {
-  return puState.powerup && puState.powerup.type === 'multiplier' ? 2 : 1;
+  return puState.powerup && puState.powerup.type === 'boost' ? 2 : 1;
 }
 
-// One obstacle per row, and only rarely a power-up: roughly one
-// power-up per ~40 obstacle rows so it stays a treat instead of noise.
-puState.spawnDebt = 20;   // rows until the next power-up rolls
+/**
+ * Sekali setiap ~40 baris obstacle, roll satu power-up.	item dibuat
+ * dari factory, ditaruh di lane acak, dan dimasukkan ke activeItems
+ * supaya collision.js yang trigger collect-nya.
+ * @param {number} zPos  posisi z di mana item di-spawn
+ * @returns {void}
+ */
 export function maybeSpawnPowerup(zPos) {
   if (puState.spawnDebt > 0) { puState.spawnDebt--; return; }
   const types = Object.keys(POWERUP_FACTORY);

@@ -46,7 +46,8 @@ export const CHARACTERS = [
       eyeR.material = new THREE.MeshBasicMaterial({ color: 0xffd772 });
 
       const earL = vox(0.12, 0.6, 0.18, 0xece2c8, { x: -0.58, y: 2.3, z: -0.1 });
-      g.add(head, eyeL, eyeR, earL);
+      const earR = vox(0.12, 0.6, 0.18, 0xece2c8, { x: 0.58, y: 2.3, z: -0.1 });
+      g.add(head, eyeL, eyeR, earL, earR);
       return g;
     }
   },

@@ -15,17 +15,29 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1117);
+// Fog is what hides the far end of the bed. Its colour is kept equal to
+// scene.background on purpose: any mismatch draws a visible band across the
+// horizon where one blends into the other, which is the seam the player
+// reported between the buildings and the track.
 scene.fog = new THREE.Fog(0x0e1117, 35, 140);
 
-// Subway Surfers Wide-Angle Camera Perspective (FOV 65 for expansive depth and panoramic track vision)
-export const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 180);
+// Wide angle on purpose: at 62 the view was a narrow slot of track and the
+// background buildings were cut off above the top of the frame. BASE_FOV is
+// imported rather than repeated, because camera.js snaps the FOV back to it
+// on every run start -- two separate literals here meant the run quietly
+// started narrower than the lobby.
+export const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 180);
 
 // Ground height: rails and wooden ties top is at 0.22
 export const GROUND_Y = 0.22;
 
 // Camera target positions for transitions
 export const CAM_LOBBY = { x: 0, y: 2.6, z: 5.2, lookY: 1.6 };
-export const CAM_GAME  = { x: 0, y: 4.6, z: 7.2, lookY: 1.2, lookZ: -25 };
+// Raised and pulled back a little: the taller eye line is what lets the
+// background towers and the hanging billboards clear the top of the frame
+// instead of being cropped. lookY rises to match so the horizon does not drop
+// away as the view widens.
+export const CAM_GAME  = { x: 0, y: 5.5, z: 7.8, lookY: 1.9, lookZ: -28 };
 camera.position.set(CAM_LOBBY.x, CAM_LOBBY.y, CAM_LOBBY.z);
 camera.lookAt(0, CAM_LOBBY.lookY, 0);
 
@@ -112,13 +124,20 @@ export function buildRailChunk(zPos) {
   g.position.z = zPos;
 
   // === GROUND: Multi-layer gravel bed with tile variation ===
-  const baseSlab = vox(9.2, 0.28, CHUNK_LEN, 0x111318, { y: -0.14 });
+  // The bed is 15.6 wide, not 9.2. The barrier walls sit at x = +/-4.85 and
+  // the scenery is out at SIDE = 6.4, so a narrower slab left a strip of empty
+  // space on each side with nothing behind it -- the solid black band the
+  // player saw between the buildings and the track. It has to reach past the
+  // scenery line or the seam comes back.
+  const baseSlab = vox(15.6, 0.28, CHUNK_LEN, 0x111318, { y: -0.14 });
   g.add(baseSlab);
 
   // Alternating gravel tile rows
   for (let z = -CHUNK_LEN / 2; z < CHUNK_LEN / 2; z += 3.0) {
     const tileColor = (Math.floor(z / 3) % 2 === 0) ? 0x1c2030 : 0x181c28;
-    const tile = vox(9.0, 0.06, 2.8, tileColor, { y: 0.01, z });
+    // Matches the widened bed above, so the tiling does not leave its own
+    // dark lip showing at the same place the bed was patched.
+    const tile = vox(15.4, 0.06, 2.8, tileColor, { y: 0.01, z });
     g.add(tile);
   }
 

@@ -10,12 +10,21 @@
 import { G, setPaused } from './state.js';
 import { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate } from './obstacles.js';
 import { bindInput } from './input.js';
+import { dodgeAction, switchLane } from './actions.js';
 import { bindUi, bindRoster, openModal, closeModals, modals, renderRoster } from './ui.js';
 import { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked } from './unlock.js';
-import { camFeel, triggerScreenShake } from './camera.js';
+import { camFeel, triggerScreenShake, resetCameraFeel } from './camera.js';
 import { clock, MAX_DT } from './timing.js';
-import { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup } from './powerups.js';
-import { renderer, scene, camera, LANES, trackChunks, TOTAL_CHUNKS } from './scene.js';
+import {
+  puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup,
+  triggerDodge, canDodge, tickDodgeCharge, resetPowerups,
+  DODGE_MAX, DODGE_IFRAME, POWERUP_DUR,
+} from './powerups.js';
+import { dayNight, updateDayNight, resetDayNight,
+         MODES as DAYNIGHT_MODES, DAYNIGHT_FADE } from './daynight.js';
+import { chaser } from './chaser.js';
+import { renderer, scene, camera, LANES, trackChunks, TOTAL_CHUNKS,
+         CAM_GAME, ambientLight, dirLight, rimLight } from './scene.js';
 import { voxelCacheStats } from './voxel.js';
 import { restoreState, loadSave, writeSave } from './save.js';
 import { roster, setCharacter } from './roster.js';
@@ -38,7 +47,13 @@ function debugState() {
     powerup: puState.powerup
       ? { type: puState.powerup.type, timeLeft: +puState.powerup.timeLeft.toFixed(2) }
       : null,
-    hits: puState.hoverboardHitsLeft,
+    // `hits` keeps its old name so the existing power-up suite still reads
+    // the shield's remaining charges; the dodge fields below are new.
+    hits: puState.shieldHitsLeft,
+    shieldGlow: !!(puState.shieldGlow && puState.shieldGlow.visible),
+    dodgeCharges: puState.dodgeCharges,
+    dashing: puState.dashing,
+    iframeLeft: +puState.iframeLeft.toFixed(3),
     coinValue: coinValue(),
     fov: +camera.fov.toFixed(2),
     camRoll: +camera.rotation.z.toFixed(4),
@@ -70,18 +85,37 @@ window.__vrState = debugState;
 
 // Modules the automated power-up tests need to reach, grouped as the harness
 // expects them. Test-only surface: nothing in the game imports this.
+// Test-only surface. Built inside a try/catch because a single wrong name here
+// throws while the literal is being constructed, which leaves window.__vrScope
+// undefined and makes every later failure look like a game bug instead of a
+// typo. The catch reports which key failed.
+window.__vrScope = null;
+try {
 window.__vrScope = {
   __store: { G },
-  __pu: { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup },
+  __pu: { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup,
+          triggerDodge, canDodge, tickDodgeCharge, resetPowerups,
+          DODGE_MAX, DODGE_IFRAME, POWERUP_DUR },
+  __day: { dayNight, updateDayNight, resetDayNight,
+           MODES: DAYNIGHT_MODES, DAYNIGHT_FADE },
+  // The round-4 report asked for these to be observable: the layout fix needs
+  // the camera rig constants, the day/night fix needs the lights it drives,
+  // and the chaser timing fix needs the chaser itself.
+  __layout: { CAM_GAME, chaser, ambientLight, dirLight, rimLight },
   __ob: { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate },
   __scene: { scene, fog: scene.fog, camera, renderer, LANES, trackChunks, TOTAL_CHUNKS, voxelCacheStats },
-  __cam: { camFeel, triggerScreenShake },
+  __cam: { camFeel, triggerScreenShake, resetCameraFeel },
+  __act: { dodgeAction, switchLane },
   __unlock: { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked },
   __roster: { setCharacter, roster },
   __ui: { openModal, closeModals, modals, renderRoster },
   __save: { loadSave, writeSave },
   __zone: { DISTRICTS, currentDistrict, currentDistrictIndex, applyDistrict, districtChange, districtReadout, __dressChunk: dressChunk }
 };
+} catch (e) {
+  window.__vrScopeError = String(e);
+  console.error('__vrScope build failed:', e);
+}
 
 function animate() {
   requestAnimationFrame(animate);

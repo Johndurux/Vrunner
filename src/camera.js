@@ -11,8 +11,13 @@ import { roster } from './roster.js';
 import { camera, LANES } from './scene.js';
 import { runSpeedBoost } from './powerups.js';
 
-/** The FOV the camera rests at; updateSpeedFov() opens it up with speed. */
-export const BASE_FOV = 62;
+/**
+ * The FOV the camera rests at; updateSpeedFov() opens it up with speed.
+ * The scene builds its camera at 70 and resetCameraFeel() snaps it back here
+ * on every run, so these two must stay equal or the first frame of a run
+ * differs from the lobby.
+ */
+export const BASE_FOV = 70;
 
 export const camFeel = {
   shakeTimeLeft: 0,
@@ -62,7 +67,7 @@ export function updateScreenShake(dt) {
 }
 
 export function updateSpeedFov(dt) {
-  // FOV opens up as the run speeds up: runSpeed 18 -> 62, 36 -> 70.
+  // FOV opens up as the run speeds up: runSpeed 18 -> base, 36 -> base + 8.
   const target = camFeel.baseFov + (Math.min(G.runSpeed, 36) - 18) / 18 * 8 * runSpeedBoost();
   camFeel.currentFov += (target - camFeel.currentFov) * Math.min(1, 4 * dt);   // smooth lerp
   if (Math.abs(camera.fov - camFeel.currentFov) > 0.01) {
