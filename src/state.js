@@ -1,0 +1,71 @@
+
+// Mutable run state, kept in one object so no module can read a half-updated
+// snapshot and so the whole shape stays visible in one place.
+
+import * as THREE from 'three';
+import { CAM_LOBBY } from './scene.js';
+import { clock } from './timing.js';
+
+export const G = {
+  gameState: 'LOBBY',   // LOBBY | TRANSITION | RUNNING | GAMEOVER
+  playerLane: 1,
+  targetX: 0,
+  playerY: 0,
+  playerVy: 0,
+  isGrounded: true,
+  isSliding: false,
+  slideTimer: null,
+  slideTimeLeft: 0,
+  isPaused: false,
+  runStartTimer: null,
+  runSpeed: 18,
+  distance: 0,
+  sessionCoins: 0,
+  walletAddress: '',
+  totalSavedCoins: 0,
+  selectedCharIdx: 0
+};
+
+export function resetPlayerMotion() {
+  G.isSliding = false;
+  G.isGrounded = true;
+  G.playerY = 0;
+  G.playerVy = 0;
+  G.slideTimeLeft = 0;
+  if (G.slideTimer) {
+    clearTimeout(G.slideTimer);
+    G.slideTimer = null;
+  }
+}
+
+export function updateCoinHud() {
+  document.getElementById('hudCoins').textContent = String(G.sessionCoins);
+  document.getElementById('topCoins').textContent = `${G.totalSavedCoins} $VIBE`;
+}
+
+// Smooth camera transition targets. The camera lerps toward these every
+// frame; the shake/FOV/roll passes nudge the result afterwards. They live in
+// G rather than in their own export because a module cannot observe another
+// module's `export let` after it is reassigned, and the values are mutated
+// in place every frame.
+G.camTargetPos = new THREE.Vector3(CAM_LOBBY.x, CAM_LOBBY.y, CAM_LOBBY.z);
+G.camTargetLook = new THREE.Vector3(0, CAM_LOBBY.lookY, 0);
+
+/**
+ * Pause or resume the simulation.
+ *
+ * A backgrounded tab keeps accumulating clock delta even though
+ * requestAnimationFrame is throttled, so the player used to run on — and
+ * usually die — while the tab was hidden. Pausing also clears the slide timer,
+ * so resuming never inherits a half-finished slide. On resume the clock delta
+ * is dropped so no time is owed to the simulation.
+ */
+export function setPaused(p) {
+  if (G.isPaused === p) return;
+  G.isPaused = p;
+  if (p) {
+    resetPlayerMotion();
+  } else {
+    clock.getDelta(); // drop the accumulated gap
+  }
+}
