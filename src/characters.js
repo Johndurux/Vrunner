@@ -28,7 +28,8 @@ export const CHARACTERS = [
       const body = vox(1.0, 0.82, 0.78, 0xc7a458, { y: 0.95 });
       const grill1 = vox(0.65, 0.1, 0.05, 0x1c1a1b, { y: 1.12, z: 0.4 });
       const grill2 = vox(0.65, 0.1, 0.05, 0x1c1a1b, { y: 0.88, z: 0.4 });
-      g.add(body, grill1, grill2);
+      const backStripe = vox(0.18, 0.65, 0.04, 0x1c1a1b, { y: 0.95, z: -0.40 });
+      g.add(body, grill1, grill2, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.62, 0.98, 0);
       armL.add(vox(0.24, 0.58, 0.24, 0xc7a458, { y: -0.15 }));
@@ -47,7 +48,8 @@ export const CHARACTERS = [
 
       const earL = vox(0.12, 0.6, 0.18, 0xece2c8, { x: -0.58, y: 2.3, z: -0.1 });
       const earR = vox(0.12, 0.6, 0.18, 0xece2c8, { x: 0.58, y: 2.3, z: -0.1 });
-      g.add(head, eyeL, eyeR, earL, earR);
+      const backBun = vox(0.18, 0.35, 0.14, 0x1c1a1b, { y: 1.90, z: -0.53 });
+      g.add(head, eyeL, eyeR, earL, earR, backBun);
       return g;
     }
   },
@@ -84,7 +86,8 @@ export const CHARACTERS = [
       const eyeR = vox(0.26, 0.3, 0.08, 0x125f4b, { x: 0.24, y: 1.94, z: 0.5 });
       const mouthHole = vox(0.28, 0.2, 0.08, 0x125f4b, { y: 1.62, z: 0.5 });
       const topNodes = vox(0.3, 0.22, 0.3, 0x6fe3c3, { y: 2.45 });
-      g.add(head, eyeL, eyeR, mouthHole, topNodes);
+      const backBun = vox(0.18, 0.35, 0.14, 0x125f4b, { y: 1.90, z: -0.52 });
+      g.add(head, eyeL, eyeR, mouthHole, topNodes, backBun);
       return g;
     }
   },
@@ -108,7 +111,8 @@ export const CHARACTERS = [
 
       const body = vox(0.9, 0.78, 0.74, 0xf2a7bc, { y: 0.95 });
       const stripe = vox(0.18, 0.65, 0.04, 0xf3ece2, { y: 0.95, z: 0.38 });
-      g.add(body, stripe);
+      const backStripe = vox(0.18, 0.65, 0.04, 0xf3ece2, { y: 0.95, z: -0.38 });
+      g.add(body, stripe, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.56, 0.98, 0);
       armL.add(vox(0.22, 0.6, 0.22, 0xf2a7bc, { y: -0.15 }));
@@ -123,7 +127,8 @@ export const CHARACTERS = [
       const pupR = vox(0.14, 0.14, 0.06, 0x1c1a1b, { x: 0.24, y: 1.9, z: 0.54 });
       const ribbon = vox(0.3, 0.18, 0.24, 0xe8607f, { y: 2.44 });
       const bun = vox(0.18, 0.35, 0.18, 0xeee6da, { y: 2.65 });
-      g.add(head, eyeL, eyeR, pupL, pupR, ribbon, bun);
+      const backBun = vox(0.18, 0.35, 0.14, 0xeee6da, { y: 1.90, z: -0.50 });
+      g.add(head, eyeL, eyeR, pupL, pupR, ribbon, bun, backBun);
       return g;
     }
   },
@@ -147,7 +152,8 @@ export const CHARACTERS = [
 
       const body = vox(0.92, 0.8, 0.76, 0x2b1e22, { y: 0.95 });
       const beeStripe = vox(0.94, 0.24, 0.78, 0xf0d44d, { y: 1.05 });
-      g.add(body, beeStripe);
+      const backStripe = vox(0.18, 0.65, 0.04, 0xf0d44d, { y: 0.95, z: -0.39 });
+      g.add(body, beeStripe, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.58, 0.98, 0);
       armL.add(vox(0.24, 0.58, 0.24, 0xf0d44d, { y: -0.15 }));
@@ -165,7 +171,8 @@ export const CHARACTERS = [
       const pupR = vox(0.14, 0.14, 0.06, 0x1c1a1b, { x: 0.24, y: 1.9, z: 0.54 });
       const antL = vox(0.14, 0.32, 0.14, 0x1c1a1b, { x: -0.32, y: 2.45 });
       const antR = vox(0.14, 0.32, 0.14, 0x1c1a1b, { x: 0.32, y: 2.45 });
-      g.add(head, eyeL, eyeR, pupL, pupR, antL, antR);
+      const backBun = vox(0.18, 0.35, 0.14, 0x2b1e22, { y: 1.90, z: -0.52 });
+      g.add(head, eyeL, eyeR, pupL, pupR, antL, antR, backBun);
       return g;
     }
   },
@@ -188,7 +195,8 @@ export const CHARACTERS = [
 
       const body = vox(0.94, 0.8, 0.78, 0x5a3a22, { y: 0.95 });
       const belt = vox(0.96, 0.16, 0.8, 0xd8432d, { y: 0.7 });
-      g.add(body, belt);
+      const backStripe = vox(0.18, 0.65, 0.04, 0xd8432d, { y: 0.95, z: -0.40 });
+      g.add(body, belt, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.58, 0.98, 0);
       armL.add(vox(0.24, 0.58, 0.24, 0x6a4a2c, { y: -0.15 }));
@@ -202,7 +210,8 @@ export const CHARACTERS = [
       const lensR = vox(0.32, 0.32, 0.06, 0xd7f58a, { x: 0.26, y: 1.95, z: 0.6 });
       lensL.material = new THREE.MeshBasicMaterial({ color: 0xd7f58a });
       lensR.material = new THREE.MeshBasicMaterial({ color: 0xd7f58a });
-      g.add(head, goggleFrame, lensL, lensR);
+      const backBun = vox(0.18, 0.35, 0.14, 0xd8432d, { y: 1.90, z: -0.53 });
+      g.add(head, goggleFrame, lensL, lensR, backBun);
       return g;
     }
   },
@@ -225,7 +234,8 @@ export const CHARACTERS = [
 
       const body = vox(0.96, 0.82, 0.78, 0x2a74bd, { y: 0.95 });
       const greenCoat = vox(0.98, 0.3, 0.8, 0x25623a, { y: 1.05 });
-      g.add(body, greenCoat);
+      const backStripe = vox(0.18, 0.65, 0.04, 0xe9c64a, { y: 0.95, z: -0.40 });
+      g.add(body, greenCoat, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.6, 0.98, 0);
       armL.add(vox(0.24, 0.6, 0.24, 0x2a74bd, { y: -0.15 }));
@@ -240,7 +250,8 @@ export const CHARACTERS = [
       const eyeR = vox(0.28, 0.24, 0.04, 0xffd772, { x: 0.24, y: 1.92, z: 0.53 });
       eyeL.material = new THREE.MeshBasicMaterial({ color: 0xffd772 });
       eyeR.material = new THREE.MeshBasicMaterial({ color: 0xffd772 });
-      g.add(head, capBrim, capTop, eyeL, eyeR);
+      const backBun = vox(0.18, 0.35, 0.14, 0xe9c64a, { y: 1.90, z: -0.53 });
+      g.add(head, capBrim, capTop, eyeL, eyeR, backBun);
       return g;
     }
   },
@@ -263,7 +274,8 @@ export const CHARACTERS = [
 
       const body = vox(0.92, 0.8, 0.76, 0xb08be0, { y: 0.95 });
       const belly = vox(0.65, 0.55, 0.05, 0xdcc8f5, { y: 0.95, z: 0.39 });
-      g.add(body, belly);
+      const backStripe = vox(0.18, 0.65, 0.04, 0xdcc8f5, { y: 0.95, z: -0.39 });
+      g.add(body, belly, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.58, 0.98, 0);
       armL.add(vox(0.24, 0.6, 0.24, 0xb08be0, { y: -0.15 }));
@@ -278,7 +290,8 @@ export const CHARACTERS = [
       const pupR = vox(0.14, 0.14, 0.06, 0x6d4fa0, { x: 0.24, y: 1.9, z: 0.54 });
       const earL = vox(0.2, 0.6, 0.18, 0x9a70d6, { x: -0.28, y: 2.6 });
       const earR = vox(0.2, 0.6, 0.18, 0x9a70d6, { x: 0.28, y: 2.6 });
-      g.add(head, eyeL, eyeR, pupL, pupR, earL, earR);
+      const backBun = vox(0.18, 0.35, 0.14, 0xdcc8f5, { y: 1.90, z: -0.52 });
+      g.add(head, eyeL, eyeR, pupL, pupR, earL, earR, backBun);
       return g;
     }
   },
@@ -304,7 +317,8 @@ export const CHARACTERS = [
       const tieBody = vox(0.14, 0.38, 0.06, 0x3fe2ec, { y: 0.95, z: 0.39 });
       tieKnot.material = new THREE.MeshBasicMaterial({ color: 0x3fe2ec });
       tieBody.material = new THREE.MeshBasicMaterial({ color: 0x3fe2ec });
-      g.add(body, tieKnot, tieBody);
+      const backStripe = vox(0.18, 0.65, 0.04, 0x3fe2ec, { y: 0.95, z: -0.39 });
+      g.add(body, tieKnot, tieBody, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.58, 0.98, 0);
       armL.add(vox(0.24, 0.58, 0.24, 0x5b36a0, { y: -0.15 }));
@@ -321,7 +335,8 @@ export const CHARACTERS = [
       const pupR = vox(0.14, 0.14, 0.06, 0x1c1a1b, { x: 0.24, y: 1.9, z: 0.54 });
       const hairL = vox(0.18, 0.24, 0.24, 0x1f2420, { x: -0.2, y: 2.45 });
       const hairR = vox(0.18, 0.24, 0.24, 0x1f2420, { x: 0.2, y: 2.45 });
-      g.add(head, eyeL, eyeR, pupL, pupR, hairL, hairR);
+      const backBun = vox(0.18, 0.35, 0.14, 0x3fe2ec, { y: 1.90, z: -0.53 });
+      g.add(head, eyeL, eyeR, pupL, pupR, hairL, hairR, backBun);
       return g;
     }
   },
@@ -344,7 +359,8 @@ export const CHARACTERS = [
 
       const body = vox(0.92, 0.8, 0.76, 0xb89c5e, { y: 0.95 });
       const greenVest = vox(0.94, 0.24, 0.78, 0x2fb58f, { y: 0.95 });
-      g.add(body, greenVest);
+      const backStripe = vox(0.18, 0.65, 0.04, 0x2fb58f, { y: 0.95, z: -0.40 });
+      g.add(body, greenVest, backStripe);
 
       const armL = new THREE.Group(); armL.position.set(-0.58, 0.98, 0);
       armL.add(vox(0.24, 0.58, 0.24, 0xb89c5e, { y: -0.15 }));
@@ -361,7 +377,8 @@ export const CHARACTERS = [
       const eyeR = vox(0.32, 0.32, 0.04, 0xf7f5ef, { x: 0.26, y: 1.92, z: 0.52 });
       const pupL = vox(0.14, 0.14, 0.06, 0x9a948a, { x: -0.24, y: 1.9, z: 0.54 });
       const pupR = vox(0.14, 0.14, 0.06, 0x9a948a, { x: 0.24, y: 1.9, z: 0.54 });
-      g.add(head, hatBrim, hatTop, eyeL, eyeR, pupL, pupR);
+      const backBun = vox(0.18, 0.35, 0.14, 0x2fb58f, { y: 1.90, z: -0.52 });
+      g.add(head, hatBrim, hatTop, eyeL, eyeR, pupL, pupR, backBun);
       return g;
     }
   }
