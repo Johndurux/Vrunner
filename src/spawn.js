@@ -3,7 +3,9 @@
 // (so the track stays readable), and a power-up only roughly once every 40
 // obstacle rows so it lands as a treat rather than noise.
 
-import { LANES, scene } from './scene.js';
+import { LANES, scene, buildRailChunk } from './scene.js';
+import { dressChunk } from './deco.js';
+import { currentDistrictIndex } from './zones.js';
 import { G } from './state.js';
 import { puState, maybeSpawnPowerup } from './powerups.js';
 import {
@@ -44,4 +46,19 @@ export function spawnRow(zPos) {
     activeItems.push(c);
   }
   maybeSpawnPowerup(zPos);
+}
+
+/**
+ * Build one track chunk and dress it in the district's scenery.
+ *
+ * The scenery is a child of the chunk group, so advanceTrack() moves it with
+ * the rails and recycles it when the chunk wraps -- no separate pooling and
+ * no collision bookkeeping, which is exactly what feature 10 asked for.
+ * @param {number} zPos
+ * @returns {THREE.Group} the chunk
+ */
+export function buildDressedChunk(zPos) {
+  const chunk = buildRailChunk(zPos);
+  dressChunk(chunk, currentDistrictIndex());
+  return chunk;
 }

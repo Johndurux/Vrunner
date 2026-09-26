@@ -6,7 +6,7 @@
 
 import { BASE_FOV } from './camera.js';
 import { roster } from './roster.js';
-import { CHUNK_LEN, GROUND_Y, TOTAL_CHUNKS, trackChunks } from './scene.js';
+import { CHUNK_LEN, GROUND_Y, TOTAL_CHUNKS, trackChunks, buildRailChunk } from './scene.js';
 import { disposeObject } from './utils.js';
 import { CAM_LOBBY, CAM_GAME, scene } from './scene.js';
 import { G, resetPlayerMotion, updateCoinHud } from './state.js';
@@ -20,8 +20,29 @@ import { loadSave, writeSave } from './save.js';
 import { renderLeaderboard } from './ui.js';
 import { setCharacter, lobbyStage } from './roster.js';
 import { spawnRow } from './spawn.js';
+import { redressScenery } from './track.js';
+import { applyDistrict, currentDistrictIndex } from './zones.js';
+
+/**
+ * Fill the track pool on first boot. The original single-file build did this
+ * inline right after buildRailChunk() was defined; splitting the file lost the
+ * loop, which left trackChunks empty and made advanceTrack() a no-op over an
+ * empty array. Building the pool here (not in scene.js) keeps the scenery
+ * layer in play: every chunk is dressed for the current district as it is
+ * created.
+ * @returns {void}
+ */
+function buildTrackPool() {
+  if (trackChunks.length > 0) return; // already built
+  for (let i = 0; i < TOTAL_CHUNKS; i++) {
+    trackChunks.push(buildRailChunk(-i * CHUNK_LEN));
+  }
+  redressScenery(currentDistrictIndex());
+  applyDistrict(scene, scene.fog);
+}
 
 export function startRunGame() {
+  buildTrackPool();
   audio.init();
   audio.click();
   G.gameState = 'TRANSITION';
@@ -37,6 +58,10 @@ export function startRunGame() {
   G.runSpeed = 18;
   G.distance = 0;
   G.sessionCoins = 0;
+  // The run always opens in the first district, so the scenery and the sky
+  // match the fresh distance. redressScenery() is not needed here: a new run
+  // has not crossed a boundary yet.
+  G.districtIdx = 0;
   updateCoinHud();
   // Clear any power-up left over from the previous run, and reset the
   // hoverboard shield so a new run never starts with a free hit.
@@ -75,6 +100,7 @@ export function startRunGame() {
 }
 
 export function returnToLobby() {
+  buildTrackPool();
   audio.click();
   G.gameState = 'LOBBY';
   if (G.runStartTimer) {

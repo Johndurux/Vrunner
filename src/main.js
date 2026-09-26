@@ -14,11 +14,14 @@ import { bindUi } from './ui.js';
 import { camFeel, triggerScreenShake } from './camera.js';
 import { clock, MAX_DT } from './timing.js';
 import { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup } from './powerups.js';
-import { renderer, scene, camera, LANES } from './scene.js';
+import { renderer, scene, camera, LANES, trackChunks, TOTAL_CHUNKS } from './scene.js';
+import { voxelCacheStats } from './voxel.js';
 import { restoreState } from './save.js';
 import { roster, setCharacter } from './roster.js';
 import { update } from './update.js';
 import { startRunGame, returnToLobby } from './lifecycle.js';
+import { DISTRICTS, currentDistrict, currentDistrictIndex, applyDistrict, districtChange, districtReadout } from './zones.js';
+import { dressChunk } from './deco.js';
 
 window.addEventListener('blur', () => setPaused(true));
 window.addEventListener('focus', () => setPaused(false));
@@ -70,8 +73,9 @@ window.__vrScope = {
   __store: { G },
   __pu: { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup },
   __ob: { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate },
-  __scene: { scene, LANES },
-  __cam: { camFeel, triggerScreenShake }
+  __scene: { scene, fog: scene.fog, camera, renderer, LANES, trackChunks, TOTAL_CHUNKS, voxelCacheStats },
+  __cam: { camFeel, triggerScreenShake },
+  __zone: { DISTRICTS, currentDistrict, currentDistrictIndex, applyDistrict, districtChange, districtReadout, __dressChunk: dressChunk }
 };
 
 function animate() {

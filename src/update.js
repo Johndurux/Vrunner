@@ -21,6 +21,9 @@ import { camera } from './scene.js';
 import { updatePlayerMotion } from './player.js';
 import { advanceTrack } from './track.js';
 import { updateCollisions } from './collision.js';
+import { animateScenery } from './deco.js';
+import { applyDistrict } from './zones.js';
+import { trackChunks, scene } from './scene.js';
 
 /**
  * Idle-bob the lobby preview mesh.
@@ -137,4 +140,9 @@ export function update(dt, mesh) {
 
   stepRun(dt, t, mesh);
   stepFeel(dt, t, mesh);
+
+  // Scenery blinkers and the sky palette are cosmetic, so they live at the
+  // end of the pass: if the run ended this frame, they still settle.
+  applyDistrict(scene, scene.fog);
+  animateScenery(trackChunks, t);
 }

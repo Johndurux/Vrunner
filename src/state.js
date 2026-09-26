@@ -23,7 +23,14 @@ export const G = {
   sessionCoins: 0,
   walletAddress: '',
   totalSavedCoins: 0,
-  selectedCharIdx: 0
+  selectedCharIdx: 0,
+  // Scenery. zoneSpan is metres per district, districtIdx is the district the
+  // run is currently dressed in, and nextDistrict is the index to swap to the
+  // moment the run crosses the boundary. Keeping them in G is what lets the
+  // decor, the palette and the HUD agree without importing each other.
+  zoneSpan: 250,
+  districtIdx: 0,
+  sceneryPending: false,
 };
 
 export function resetPlayerMotion() {
