@@ -1052,6 +1052,90 @@
       background: var(--bg2);
     }
 
+    /* Floating score popups */
+    .floating-text-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 25;
+      overflow: hidden;
+    }
+    .float-score {
+      position: absolute;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 32px;
+      color: var(--yellow);
+      text-shadow: 0 0 16px rgba(255, 208, 0, 0.8), 0 2px 6px #000;
+      transform: translate(-50%, -50%);
+      animation: scoreFloatUp 0.75s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+    @keyframes scoreFloatUp {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.6);
+      }
+      30% {
+        opacity: 1;
+        transform: translate(-50%, -35px) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -90px) scale(0.9);
+      }
+    }
+
+    /* Speed vignette on run */
+    .speed-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0;
+      transition: opacity 0.3s;
+      background: radial-gradient(circle, transparent 60%, rgba(255, 107, 0, 0.16) 100%);
+    }
+    .speed-vignette.active {
+      opacity: 1;
+    }
+
+    /* Campaign Mission Pill in Lobby */
+    .campaign-bar {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(17, 0, 32, 0.9);
+      border: 1px solid var(--orange);
+      border-radius: 20px;
+      padding: 5px 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--white);
+      pointer-events: auto;
+      box-shadow: 0 0 24px rgba(255, 107, 0, 0.25);
+    }
+    .campaign-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 8px var(--orange);
+      animation: blink 1s infinite;
+    }
+    .campaign-link {
+      color: var(--yellow);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .campaign-link:hover {
+      text-decoration: underline;
+    }
+
     /* Responsive Overrides */
     @media (max-width: 640px) {
       .hero-name { font-size: 48px; }
@@ -1298,6 +1382,16 @@
     </div>
   </div>
 
+  <div class="floating-text-container" id="floatContainer"></div>
+  <div class="speed-vignette" id="speedVignette"></div>
+
+  <!-- Top Campaign Mission Pill in Lobby -->
+  <div class="campaign-bar" id="campaignBar">
+    <div class="campaign-dot"></div>
+    <span>RH TESTNET MISSION:</span>
+    <a href="https://vibevibe.fun" target="_blank" rel="noopener noreferrer" class="campaign-link">TRADE $VPLAY ON VIBEVIBE.FUN ↗</a>
+  </div>
+
   <!-- Feedback Elements -->
   <div id="coinFlash" class="coin-flash"></div>
 
@@ -1491,6 +1585,56 @@
       }, { passive: false });
       document.getElementById('touchSlide')?.addEventListener('touchend', () =>
         document.getElementById('touchSlide').classList.remove('pressed'));
+
+      // Floating coin popup text
+      window.__spawnCoinPopup = function(text, color) {
+        const container = document.getElementById('floatContainer');
+        if (!container) return;
+        const el = document.createElement('div');
+        el.className = 'float-score';
+        el.textContent = text || '+1 $VPLAY';
+        if (color) el.style.color = color;
+        el.style.left = (window.innerWidth / 2 + (Math.random() * 80 - 40)) + 'px';
+        el.style.top = (window.innerHeight * 0.58) + 'px';
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 750);
+      };
+
+      // Monitor coin pickup and speed intensity
+      let _lastCoinsCollected = 0;
+      setInterval(() => {
+        const g = window.__vrScope?.__store?.G;
+        if (g && g.gameState === 'RUNNING') {
+          if (g.sessionCoins > _lastCoinsCollected) {
+            const diff = g.sessionCoins - _lastCoinsCollected;
+            window.__spawnCoinPopup(`+${diff} $VPLAY`);
+            _lastCoinsCollected = g.sessionCoins;
+          }
+          const vig = document.getElementById('speedVignette');
+          if (vig && g.runSpeed >= 20) vig.classList.add('active');
+        } else {
+          _lastCoinsCollected = 0;
+          const vig = document.getElementById('speedVignette');
+          if (vig) vig.classList.remove('active');
+        }
+      }, 50);
+
+      // Hide campaign bar during run, show in lobby
+      const dashUI = document.getElementById('dashboardUI');
+      if (dashUI) {
+        new MutationObserver(() => {
+          const isHidden = dashUI.classList.contains('hidden');
+          const cBar = document.getElementById('campaignBar');
+          if (cBar) cBar.style.display = isHidden ? 'none' : 'flex';
+        }).observe(dashUI, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      // Unlock procedural audio on first interaction
+      window.addEventListener('pointerdown', () => {
+        if (window.__vrScope?.__audio) {
+          window.__vrScope.__audio.init();
+        }
+      }, { once: true });
     })();
   </script>
 </body>
