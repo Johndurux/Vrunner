@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Vibe Runner · Web3 3D Subway Game</title>
+  <title>vibe/runner · Crypto-Brutal Terminal 3D Runner</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=IBM+Plex+Mono:wght@400;700&display=swap">
 
   <script type="importmap">
     {
@@ -16,14 +17,60 @@
   </script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    /* ═══════════════════════════════════════════════
+       CRYPTO-BRUTAL TERMINAL DESIGN SYSTEM
+    ═══════════════════════════════════════════════ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg: #050709;
+      --green: #00FF88;
+      --red: #FF3B4E;
+      --gray-900: #0a0e14;
+      --gray-800: #11161f;
+      --gray-700: #1a1a1a;
+      --gray-600: #222;
+      --gray-500: #333;
+      --gray-400: #444;
+      --gray-300: #555;
+      --gray-200: #888;
+      --white: #ffffff;
+      --font-hero: 'Space Grotesk', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+      --font-submono: 'JetBrains Mono', monospace;
+    }
+
     html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0b0d12;
-      color: #fff;
-      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font-mono);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
     }
 
     #webgl {
@@ -36,7 +83,7 @@
     }
 
     /* ═══════════════════════════════════════════════
-       1. TOP HEADER (WALLET, COINS, CHAIN)
+       1. TOP HEADER BAR
     ═══════════════════════════════════════════════ */
     .top-nav {
       position: absolute;
@@ -47,84 +94,87 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 28px;
+      padding: 16px 24px;
       pointer-events: none;
     }
 
-    .brand-logo {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      text-transform: uppercase;
-      text-shadow: 0 4px 16px rgba(0,0,0,0.8);
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
-    .brand-logo em { font-style: normal; color: #e0643a; }
+
+    .brand-logo {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+
     .brand-sub {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 10px;
-      letter-spacing: 2px;
-      color: rgba(255,255,255,0.45);
+      color: var(--gray-400);
+      letter-spacing: 1px;
       text-transform: uppercase;
     }
 
     .top-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
       pointer-events: auto;
-      flex-wrap: wrap;
-      justify-content: flex-end;
     }
 
-    .coin-pill {
-      background: rgba(18, 22, 30, 0.85);
-      border: 1px solid rgba(245, 166, 35, 0.4);
-      backdrop-filter: blur(8px);
-      padding: 6px 14px;
-      border-radius: 20px;
-      display: flex;
+    /* Coin Counter: bracket notation [ 0 $VIBE ] */
+    .coin-counter-box {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--green);
+      border-bottom: 1px dashed var(--green);
+      padding-bottom: 2px;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      color: #f5a623;
-      font-size: 13px;
     }
-    .coin-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #f5a623;
-      box-shadow: 0 0 8px #f5a623;
-    }
+    .coin-counter-box::before { content: '[ '; color: var(--green); }
+    .coin-counter-box::after { content: ' ]'; color: var(--green); }
 
-    .chain-pill {
-      background: rgba(124, 92, 255, 0.15);
-      border: 1px solid rgba(124, 92, 255, 0.4);
-      color: #7c5cff;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      padding: 6px 14px;
-      border-radius: 20px;
+    /* Chain status indicator */
+    .chain-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--gray-200);
+      text-transform: uppercase;
       letter-spacing: 1px;
     }
 
+    /* Connect Wallet button */
     .wallet-btn {
-      background: #181b24;
-      border: 1px solid rgba(255,255,255,0.18);
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 20px;
-      font-family: 'Space Grotesk', sans-serif;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font-mono);
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 6px 16px;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: background 0.15s, color 0.15s;
+      text-transform: uppercase;
     }
-    .wallet-btn:hover { background: #222736; border-color: #00e5ff; color: #00e5ff; }
+    .wallet-btn:hover {
+      background: var(--green);
+      color: var(--bg);
+    }
 
     /* ═══════════════════════════════════════════════
-       2. LOBBY DASHBOARD UI
+       2. LOBBY DASHBOARD
     ═══════════════════════════════════════════════ */
     .dashboard-ui {
       position: absolute;
@@ -136,45 +186,56 @@
       justify-content: flex-end;
       align-items: center;
       padding-bottom: 32px;
-      transition: opacity 0.4s, transform 0.4s;
+      transition: opacity 0.3s;
     }
     .dashboard-ui.hidden {
       opacity: 0;
-      transform: scale(0.96);
       pointer-events: none;
-      visibility: hidden;
     }
 
-    /* Character preview hero card (positioned at upper center so character is fully visible) */
+    /* Raw Terminal Character Display */
     .hero-meta {
       position: absolute;
-      top: 90px;
+      top: 76px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
-      background: rgba(18, 22, 30, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(10px);
-      padding: 8px 28px;
-      border-radius: 16px;
+      pointer-events: auto;
     }
-    .hero-name {
-      font-size: 34px;
+    .hero-name-row {
+      font-family: var(--font-hero);
+      font-size: 56px;
       font-weight: 800;
-      letter-spacing: -0.5px;
+      letter-spacing: -1px;
       text-transform: uppercase;
-      text-shadow: 0 0 25px rgba(255,255,255,0.3);
-      line-height: 1.1;
+      color: var(--white);
+      line-height: 1.05;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .hero-prefix {
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 40px;
+      margin-right: 4px;
     }
     .hero-role {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 11px;
+      font-weight: 400;
+      color: var(--gray-300);
       letter-spacing: 2px;
-      color: rgba(255,255,255,0.5);
       text-transform: uppercase;
+      margin-top: 6px;
+    }
+    .hero-role::before {
+      content: '// ';
+      color: var(--gray-400);
     }
 
-    /* Arrow switchers */
+    /* Switcher Arrows */
     .char-switcher {
       position: absolute;
       top: 50%;
@@ -188,103 +249,98 @@
     }
     .switch-btn {
       pointer-events: auto;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(22, 26, 36, 0.7);
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      font-size: 20px;
+      background: none;
+      border: none;
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 12px 18px;
+      transition: color 0.15s, text-shadow 0.15s;
+    }
+    .switch-btn:hover {
+      color: var(--white);
+      text-shadow: 0 0 10px var(--green);
+    }
+
+    /* RUN Button */
+    .play-box {
+      margin-bottom: 24px;
+      pointer-events: auto;
+    }
+    .btn-play {
+      width: 180px;
+      height: 64px;
+      border-radius: 6px;
+      background: var(--green);
+      border: none;
+      color: var(--bg);
+      font-family: var(--font-hero);
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 3px;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s;
+      transition: transform 0.08s, outline 0.1s;
     }
-    .switch-btn:hover { background: rgba(224, 100, 58, 0.9); border-color: #fff; transform: scale(1.1); }
+    .btn-play:hover {
+      outline: 2px solid var(--green);
+      outline-offset: 3px;
+    }
+    .btn-play:active {
+      transform: scale(0.97);
+    }
 
-    /* PLAY BUTTON */
-    .play-box {
-      pointer-events: auto;
-      margin-bottom: 20px;
-    }
-    .btn-play {
-      background: linear-gradient(135deg, #e0643a, #ff7e54);
-      color: #fff;
-      border: none;
-      padding: 18px 64px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      border-radius: 16px;
-      cursor: pointer;
-      box-shadow: 0 12px 36px rgba(224, 100, 58, 0.6);
-      transition: all 0.18s;
+    /* Bottom Menu Bar */
+    .menu-bar {
       display: flex;
       align-items: center;
       gap: 12px;
-    }
-    .btn-play:hover {
-      transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 16px 48px rgba(224, 100, 58, 0.85);
-    }
-    .btn-play:active { transform: translateY(1px); }
-
-    /* BOTTOM MENU BAR (DASHBOARD NAVIGATION) */
-    .menu-bar {
       pointer-events: auto;
-      display: flex;
-      gap: 10px;
-      background: rgba(18, 22, 30, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(12px);
-      padding: 8px 12px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
-
     .menu-item {
-      background: transparent;
+      background: none;
       border: none;
-      color: rgba(255,255,255,0.7);
-      padding: 10px 18px;
-      border-radius: 10px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
+      font-family: var(--font-mono);
       font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--gray-400);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.15s;
+      padding: 4px 6px;
+      transition: color 0.15s;
     }
     .menu-item:hover {
-      background: rgba(255,255,255,0.08);
-      color: #fff;
+      color: var(--white);
     }
     .menu-item.active {
-      background: rgba(224, 100, 58, 0.2);
-      color: #e0643a;
+      color: var(--green);
+      border-bottom: 1px dashed var(--green);
+    }
+    .menu-divider {
+      color: var(--gray-500);
+      font-size: 12px;
     }
 
     /* ═══════════════════════════════════════════════
-       3. MODAL DRAWERS (CHARACTERS, LEADERBOARD, SETTINGS)
+       3. MODALS
     ═══════════════════════════════════════════════ */
     .modal-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
-      z-index: 40;
-      background: rgba(8, 10, 14, 0.85);
-      backdrop-filter: blur(16px);
+      z-index: 50;
+      background: rgba(5, 7, 9, 0.88);
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.25s ease;
-      padding: 24px;
+      transition: opacity 0.2s ease;
+      padding: 20px;
     }
     .modal-overlay.open {
       opacity: 1;
@@ -292,16 +348,13 @@
     }
 
     .modal-card {
-      background: #141720;
-      border: 1px solid rgba(255,255,255,0.14);
+      background: var(--bg);
+      border: 1px solid var(--gray-700);
+      border-left: 2px solid var(--green);
+      border-radius: 4px;
+      padding: 32px;
+      max-width: 580px;
       width: 100%;
-      max-width: 620px;
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
       max-height: 85vh;
       overflow-y: auto;
     }
@@ -310,217 +363,665 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed var(--gray-700);
+      margin-bottom: 24px;
     }
+
     .modal-title {
-      font-size: 22px;
-      font-weight: 800;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 4px;
       text-transform: uppercase;
-      letter-spacing: -0.5px;
+      color: var(--green);
     }
+
     .close-btn {
-      background: rgba(255,255,255,0.08);
+      background: none;
       border: none;
-      color: #fff;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      font-size: 16px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--gray-400);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      transition: color 0.15s;
     }
-    .close-btn:hover { background: #e0643a; }
+    .close-btn:hover {
+      color: var(--red);
+    }
 
     /* Character Roster Grid */
     .roster-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
     }
+
     .roster-item {
-      background: #1a1e2a;
-      border: 2px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 16px;
+      border: 1px dashed var(--gray-700);
+      border-radius: 2px;
+      padding: 16px 10px;
+      text-align: center;
       cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
+      background: var(--gray-900);
       transition: all 0.15s;
+      position: relative;
     }
-    .roster-item:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
-    .roster-item.selected { border-color: #e0643a; background: rgba(224,100,58,0.12); }
+    .roster-item:hover {
+      border-color: var(--gray-500);
+      background: var(--gray-800);
+    }
+    .roster-item.selected {
+      border: 1px solid var(--green);
+      background: rgba(0, 255, 136, 0.04);
+    }
+    .roster-item.locked {
+      opacity: 0.4;
+    }
+
     .roster-avatar {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
-      background: var(--c);
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 10px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 2px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      font-weight: 800;
-      color: #111;
-    }
-    .roster-name { font-weight: 700; font-size: 16px; }
-    .roster-status { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #00e5ff; }
-    /* A locked entry stays visible but reads as unavailable: dimmed avatar,
-       a lock glyph over it, and the outstanding requirement underneath. */
-    .roster-item.locked { cursor: not-allowed; border-color: rgba(255,255,255,0.04); }
-    .roster-item.locked:hover { transform: none; border-color: rgba(255,255,255,0.04); }
-    .roster-item.locked .roster-avatar { opacity: 0.32; filter: grayscale(1); }
-    .roster-item.locked .roster-name { color: rgba(255,255,255,0.45); }
-    .roster-item.locked .roster-status { color: #7a8296; }
-    .roster-lock {
-      position: absolute;
-      inset: 16px auto auto 50%;
-      transform: translateX(-50%);
-      font-size: 26px;
-      color: #8b93a7;
-      pointer-events: none;
-    }
-    .roster-item { position: relative; }
-    .roster-req {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: rgba(255,255,255,0.5);
-      text-align: center;
-      line-height: 1.5;
-    }
-    .roster-req .done { color: #4dff9e; }
-    .roster-req .todo { color: #ffb454; }
-    .roster-new {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: #0b0d12;
-      background: #4dff9e;
-      border-radius: 4px;
-      padding: 2px 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--c, #fff);
     }
 
-    /* Leaderboard Table */
+    .roster-name {
+      font-family: var(--font-hero);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--white);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .roster-status {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--gray-300);
+    }
+    .roster-item.locked .roster-status {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .roster-req {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .roster-req .done {
+      color: var(--green);
+      text-decoration: line-through;
+    }
+    .roster-req .todo {
+      color: var(--red);
+    }
+
+    .roster-lock {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 11px;
+    }
+
+    .roster-new {
+      display: inline-block;
+      margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--bg);
+      background: var(--green);
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    /* Leaderboard */
     .lead-table {
       width: 100%;
       border-collapse: collapse;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
     }
     .lead-table th {
-      text-align: left;
-      padding: 10px;
-      color: rgba(255,255,255,0.4);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-family: var(--font-mono);
       font-size: 10px;
-      letter-spacing: 1px;
+      letter-spacing: 3px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-bottom: 1px dashed var(--gray-600);
+      text-align: left;
     }
     .lead-table td {
-      padding: 12px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--gray-300);
+      padding: 10px 12px;
+      border-bottom: 1px dashed var(--gray-700);
     }
-    .rank-1 { color: #f5a623; font-weight: 700; }
-    .rank-2 { color: #dcdcdc; font-weight: 700; }
-    .rank-3 { color: #cd7f32; font-weight: 700; }
+    .lead-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .lead-table .rank-1 { color: #FFD700 !important; font-weight: 700; }
+    .lead-table .rank-2 { color: #C0C0C0 !important; font-weight: 700; }
+    .lead-table .rank-3 { color: #CD7F32 !important; font-weight: 700; }
+    .lead-table tr.you-row td,
+    .lead-table tr:has(td:contains('(you)')) td {
+      background: rgba(0, 255, 136, 0.04);
+      color: var(--green);
+    }
+
+    .lead-warn {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--red);
+      margin-top: 18px;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* Settings Modal */
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--gray-700);
+    }
+    .settings-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #666;
+    }
+    .settings-val {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--white);
+    }
+    .settings-val.net-highlight {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .btn-toggle-sound {
+      background: transparent;
+      border: none;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--green);
+      padding: 2px 4px;
+    }
+    .btn-toggle-sound::before { content: '[ '; }
+    .btn-toggle-sound::after { content: ' ]'; }
+    .btn-toggle-sound.off {
+      color: var(--red);
+    }
 
     /* ═══════════════════════════════════════════════
-       4. IN-GAME HUD & GAME OVER
+       4. IN-GAME HUD
     ═══════════════════════════════════════════════ */
     .game-hud {
       position: absolute;
       inset: 0;
       z-index: 15;
       pointer-events: none;
-      display: flex;
+      display: none;
       flex-direction: column;
       justify-content: space-between;
-      padding: 28px;
-      opacity: 0;
-      transition: opacity 0.3s;
+      padding: 24px;
     }
-    .game-hud.active { opacity: 1; }
+    .game-hud.active {
+      display: flex;
+    }
 
     .hud-top-row {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
+      gap: 32px;
+      align-items: baseline;
     }
 
-    .hud-dist-box {
-      background: rgba(18, 22, 30, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(8px);
-      padding: 10px 18px;
-      border-radius: 12px;
-      display: inline-flex;
+    .hud-stat-item {
+      display: flex;
       flex-direction: column;
     }
-    .hud-dist {
-      font-size: 32px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-    .hud-dist span { color: #00e5ff; font-size: 18px; }
 
+    .hud-dist-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--white);
+      border-bottom: 1px dashed var(--gray-500);
+      padding-bottom: 4px;
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .hud-dist-val::before {
+      content: 'DIST: ';
+      font-size: 14px;
+      color: var(--gray-200);
+      margin-right: 4px;
+    }
+    .hud-dist-val span {
+      font-size: 18px;
+    }
+
+    .hud-coins-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--green);
+      border-bottom: 1px dashed var(--gray-500);
+      padding-bottom: 4px;
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .hud-coins-val::before {
+      content: 'VIBE: ';
+      font-size: 14px;
+      color: var(--green);
+      margin-right: 4px;
+    }
+
+    .hud-powerup-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--green);
+      animation: blink 1s step-end infinite;
+      border-bottom: 1px dashed var(--green);
+      padding-bottom: 4px;
+    }
+    .hud-powerup-val::before { content: '['; }
+    .hud-powerup-val::after { content: ']'; }
+
+    .hud-dodge-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: #f5a623;
+      border-bottom: 1px dashed var(--gray-500);
+      padding-bottom: 4px;
+    }
+    .hud-dodge-val::before {
+      content: 'DODGE: ';
+      font-size: 14px;
+      letter-spacing: 1px;
+      color: var(--gray-200);
+    }
+
+    .control-hint {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--gray-500);
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    @media (max-width: 640px) {
+      .control-hint { display: none; }
+    }
+
+    /* ═══════════════════════════════════════════════
+       5. GAME OVER SCREEN (REKT.)
+    ═══════════════════════════════════════════════ */
     .game-over-screen {
-      position: absolute;
+      position: fixed;
       inset: 0;
-      z-index: 50;
-      background: rgba(10, 12, 16, 0.92);
-      backdrop-filter: blur(14px);
-      display: flex;
+      z-index: 40;
+      background: var(--bg);
+      display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
+      text-align: center;
+      padding: 24px;
     }
     .game-over-screen.active {
-      opacity: 1;
-      pointer-events: auto;
+      display: flex;
+    }
+
+    /* Scanline dramatic horizontal bands */
+    .game-over-screen::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: linear-gradient(180deg, rgba(255,59,78,0.06) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .game-over-screen::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: linear-gradient(0deg, rgba(0,255,136,0.04) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    /* High score badge */
+    .new-best-badge {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      background: var(--green);
+      color: var(--bg);
+      padding: 4px 12px;
+      border-radius: 2px;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+      display: none;
+      animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .new-best-badge.show {
+      display: inline-block;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .rekt-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      margin-top: 8px;
     }
 
     .over-stat-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 20px 36px;
+      border-top: 1px dashed var(--gray-600);
+      border-bottom: 1px dashed var(--gray-600);
+      padding: 24px 48px;
+      margin: 36px 0;
       display: flex;
-      gap: 36px;
-      margin: 20px 0;
+      gap: 56px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--gray-400);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .stat-val {
+      font-family: var(--font-hero);
+      font-weight: 800;
+      font-size: 48px;
+      color: var(--white);
+      line-height: 1;
+    }
+    .stat-val.green {
+      color: var(--green);
     }
 
     .over-btn-row {
       display: flex;
-      gap: 12px;
+      gap: 16px;
+      align-items: center;
     }
-  
 
-    /* Small-viewport pass. The control hint was clipped on 360-420px portrait
-       screens, so it scales with the viewport instead of a fixed size, and the
-       header cluster and menu bar are trimmed to stop the page overflowing
-       sideways. The menu keeps its icons; only the text labels go. */
-    @media (max-width: 480px) {
-      .control-hint { font-size: 9px !important; letter-spacing: 0.2px !important; }
-      .control-hint .hint-keys { display: none; }
-      /* Chain pill + wallet button share the header with the coin pill; at
-         phone widths the three together overflow, so drop the chain label
-         and keep coin + connect. */
-      .chain-pill { display: none !important; }
-      .wallet-btn { padding: 8px 12px; font-size: 11px; }
-      .coin-pill { padding: 8px 12px; font-size: 11px; }
-      /* The four menu buttons need 585px and overflow a 400px phone, which
-         forces a horizontal scroll. On narrow screens keep the icons and drop
-         the text labels; the emoji still identify each button. */
-      .menu-bar { gap: 4px; padding: 6px 8px; }
-      .menu-item { padding: 8px 10px; font-size: 12px; }
-      .menu-label { display: none; }
+    .btn-restart {
+      border-radius: 4px;
+      background: var(--green);
+      border: none;
+      color: var(--bg);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 3px;
+      padding: 14px 28px;
+      cursor: pointer;
+      transition: outline 0.1s;
     }
-</style>
+    .btn-restart:hover {
+      outline: 2px solid var(--green);
+      outline-offset: 3px;
+    }
+
+    .btn-lobby {
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--gray-500);
+      color: var(--gray-500);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 3px;
+      padding: 14px 28px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-lobby:hover {
+      border-color: var(--white);
+      color: var(--white);
+    }
+
+    .btn-share {
+      margin-top: 24px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px dashed var(--gray-500);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--gray-300);
+      cursor: pointer;
+      padding-bottom: 4px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-share:hover {
+      color: var(--white);
+      border-color: var(--white);
+    }
+
+    /* ═══════════════════════════════════════════════
+       6. MICRO-ANIMATIONS & KEYFRAMES
+    ═══════════════════════════════════════════════ */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .cursor { animation: blink 1s step-end infinite; color: var(--green); }
+
+    @keyframes statusBlink {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green); }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: statusBlink 1.5s ease infinite;
+      display: inline-block;
+    }
+
+    @keyframes glitch1 {
+      0%   { clip-path: inset(20% 0 60% 0); transform: translateX(-3px); }
+      20%  { clip-path: inset(70% 0 10% 0); transform: translateX(3px); }
+      40%  { clip-path: inset(45% 0 45% 0); transform: translateX(-2px); }
+      60%  { clip-path: inset(10% 0 80% 0); transform: translateX(4px); }
+      80%  { clip-path: inset(60% 0 25% 0); transform: translateX(-3px); }
+      100% { clip-path: inset(20% 0 60% 0); transform: translateX(0); }
+    }
+    @keyframes glitch2 {
+      0%   { clip-path: inset(55% 0 30% 0); transform: translateX(3px); }
+      33%  { clip-path: inset(15% 0 70% 0); transform: translateX(-4px); }
+      66%  { clip-path: inset(80% 0 5%  0); transform: translateX(2px); }
+      100% { clip-path: inset(55% 0 30% 0); transform: translateX(0); }
+    }
+    .rekt-title {
+      position: relative;
+      display: inline-block;
+    }
+    .rekt-title::before {
+      content: attr(data-text);
+      position: absolute;
+      inset: 0;
+      color: var(--red);
+      animation: glitch1 0.15s steps(1) infinite;
+    }
+    .rekt-title::after {
+      content: attr(data-text);
+      position: absolute;
+      inset: 0;
+      color: #00e5ff;
+      animation: glitch2 0.2s steps(1) infinite;
+    }
+
+    .coin-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0, 255, 136, 0.12) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.05s;
+    }
+    .coin-flash.active { opacity: 1; }
+
+    .zone-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 35;
+      background: var(--bg);
+      border-bottom: 1px solid var(--green);
+      padding: 16px 24px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      transform: translateY(-100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .zone-banner.active { transform: translateY(0); }
+    .zone-banner-name {
+      font-family: var(--font-hero);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+    .zone-banner-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    /* Touch Controls for Mobile */
+    .touch-controls {
+      position: fixed;
+      bottom: 32px;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: none;
+      justify-content: space-between;
+      padding: 0 24px;
+      pointer-events: none;
+    }
+    @media (max-width: 640px) {
+      .touch-controls { display: flex; }
+    }
+    .touch-cluster {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .touch-btn {
+      width: 56px;
+      height: 56px;
+      border: 1px solid var(--gray-500);
+      border-radius: 4px;
+      background: rgba(5, 7, 9, 0.85);
+      color: var(--gray-300);
+      font-family: var(--font-mono);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+      transition: all 0.05s;
+    }
+    .touch-btn:active, .touch-btn.pressed {
+      background: rgba(0, 255, 136, 0.12);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* GPU Context Loss Notice */
+    #contextLost {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: rgba(5, 7, 9, 0.95);
+      padding: 20px;
+    }
+    .context-lost-box {
+      border: 1px solid var(--green);
+      border-radius: 4px;
+      padding: 28px 36px;
+      max-width: 360px;
+      background: var(--bg);
+    }
+
+    /* Responsive Viewport Optimizations */
+    @media (max-width: 480px) {
+      .top-nav { padding: 12px 16px; }
+      .brand-sub { display: none; }
+      .chain-indicator { display: none; }
+      .hero-name-row { font-size: 40px; }
+      .hero-prefix { font-size: 28px; }
+      .over-stat-card { gap: 28px; padding: 20px 24px; }
+      .stat-val { font-size: 36px; }
+      .menu-bar { gap: 6px; }
+      .menu-item { font-size: 11px; }
+      .roster-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
 
@@ -529,58 +1030,53 @@
 
   <!-- 1. TOP HEADER BAR -->
   <header class="top-nav">
-    <div>
-      <div class="brand-logo">vibe<em>/</em>runner</div>
-      <div class="brand-sub">Subway Surfers · Robinhood Chain</div>
+    <div class="brand-group">
+      <div class="brand-logo">VIBE/RUNNER</div>
+      <div class="brand-sub">ROBINHOOD TESTNET // BLOCK #46630</div>
     </div>
 
     <div class="top-right">
-      <div class="coin-pill">
-        <span class="coin-dot"></span>
+      <div class="coin-counter-box">
         <span id="topCoins">0 $VIBE</span>
       </div>
-      <div class="chain-pill">Robinhood #46630</div>
-      <button class="wallet-btn" id="connectWalletBtn">Connect Wallet</button>
+      <div class="chain-indicator">
+        <span class="status-dot"></span>
+        <span>TESTNET</span>
+      </div>
+      <button class="wallet-btn" id="connectWalletBtn">CONNECT_WALLET</button>
     </div>
   </header>
 
   <!-- 2. MAIN LOBBY DASHBOARD UI -->
   <div class="dashboard-ui" id="dashboardUI">
     <div class="hero-meta">
-      <div class="hero-name" id="lobbyHeroName">ARMOR</div>
+      <div class="hero-name-row">
+        <span class="hero-prefix">&gt;</span>
+        <span id="lobbyHeroName">ARMOR</span>
+        <span class="cursor">_</span>
+      </div>
       <div class="hero-role" id="lobbyHeroRole">Gold Mecha · Glow Visor</div>
     </div>
 
     <div class="char-switcher">
-      <button class="switch-btn" id="btnPrevChar">❮</button>
-      <button class="switch-btn" id="btnNextChar">❯</button>
+      <button class="switch-btn" id="btnPrevChar">&lt;&lt;</button>
+      <button class="switch-btn" id="btnNextChar">&gt;&gt;</button>
     </div>
 
     <!-- MAIN PLAY BUTTON -->
     <div class="play-box">
-      <button class="btn-play" id="btnPlayGame">
-        <span>▶</span> START RUN
-      </button>
+      <button class="btn-play" id="btnPlayGame">RUN ▶</button>
     </div>
 
     <!-- DASHBOARD MENU NAVIGATION -->
     <div class="menu-bar">
-      <button class="menu-item" id="navRoster">
-        <span>👥</span>
-        <span class="menu-label">Characters</span>
-      </button>
-      <button class="menu-item" id="navLeaderboard">
-        <span>🏆</span>
-        <span class="menu-label">Leaderboard</span>
-      </button>
-      <button class="menu-item" id="navSettings">
-        <span>⚙️</span>
-        <span class="menu-label">Settings</span>
-      </button>
-      <button class="menu-item" id="navTwitter">
-        <span>𝕏</span>
-        <span class="menu-label">@vibevibefun</span>
-      </button>
+      <button class="menu-item" id="navRoster">ROSTER</button>
+      <span class="menu-divider">/</span>
+      <button class="menu-item" id="navLeaderboard">LEADERBOARD</button>
+      <span class="menu-divider">/</span>
+      <button class="menu-item" id="navSettings">SETTINGS</button>
+      <span class="menu-divider">/</span>
+      <button class="menu-item" id="navTwitter">@VIBEVIBEFUN</button>
     </div>
   </div>
 
@@ -588,8 +1084,8 @@
   <div class="modal-overlay" id="modalRoster">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title">Select Character</div>
-        <button class="close-btn" data-close="modalRoster">✕</button>
+        <div class="modal-title">SELECT CHARACTER // ROSTER</div>
+        <button class="close-btn" data-close="modalRoster">[ X ]</button>
       </div>
       <div class="roster-grid" id="rosterList">
         <!-- Rendered by JS -->
@@ -601,22 +1097,23 @@
   <div class="modal-overlay" id="modalLeaderboard">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title">Robinhood Testnet Leaderboard</div>
-        <button class="close-btn" data-close="modalLeaderboard">✕</button>
+        <div class="modal-title">ROBINHOOD TESTNET // LEADERBOARD</div>
+        <button class="close-btn" data-close="modalLeaderboard">[ X ]</button>
       </div>
       <table class="lead-table">
         <thead>
           <tr>
             <th>RANK</th>
             <th>RUNNER</th>
-            <th>DISTANCE</th>
-            <th>$VIBE COINS</th>
+            <th>DIST</th>
+            <th>$VIBE</th>
           </tr>
         </thead>
         <tbody id="leaderboardRows">
           <!-- Filled by JS -->
         </tbody>
       </table>
+      <div class="lead-warn">(DEMO DATA — CONNECT WALLET FOR REAL SCORES)</div>
     </div>
   </div>
 
@@ -624,37 +1121,32 @@
   <div class="modal-overlay" id="modalSettings">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-title">Game Settings</div>
-        <button class="close-btn" data-close="modalSettings">✕</button>
+        <div class="modal-title">TERMINAL CONFIG // SETTINGS</div>
+        <button class="close-btn" data-close="modalSettings">[ X ]</button>
       </div>
-      <div style="display:flex; flex-direction:column; gap:16px; font-size:14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Sound FX (8-Bit Synth)</span>
-          <button class="wallet-btn" id="toggleSoundBtn">ON</button>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">Sound FX (8-Bit Synth)</span>
+          <button class="btn-toggle-sound" id="toggleSoundBtn">ON</button>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Controls Mode</span>
-          <span class="control-hint" style="font-family:'JetBrains Mono'; color:#00e5ff;"><span class="hint-keys">Keyboard (A/D/W/S) + </span>Swipe</span>
+        <div class="settings-row">
+          <span class="settings-label">Controls Mode</span>
+          <span class="settings-val">KEYBOARD (A/D/W/S) + SWIPE</span>
         </div>
-        <div class="net-row" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Target Network</span>
-          <span style="font-family:'JetBrains Mono'; color:#7c5cff;">Robinhood Chain Testnet (46630)</span>
+        <div class="settings-row">
+          <span class="settings-label">Target Network</span>
+          <span class="settings-val net-highlight">ROBINHOOD CHAIN #46630</span>
         </div>
       </div>
     </div>
   </div>
 
   <!-- 6b. GPU CONTEXT LOSS NOTICE -->
-  <!-- Covers the canvas when the WebGL context is lost, so a frozen 3D view
-       cannot be mistaken for a live run: the HUD counter would otherwise keep
-       climbing while nothing is being drawn. -->
-  <div id="contextLost" style="position:fixed; inset:0; z-index:60; display:none;
-       align-items:center; justify-content:center; text-align:center;
-       background:rgba(8,10,14,0.88); backdrop-filter:blur(10px);">
-    <div>
-      <div style="font-size:15px; color:#00e5ff; letter-spacing:0.14em; text-transform:uppercase;">Reconnecting…</div>
-      <div style="margin-top:10px; font-size:12px; color:rgba(255,255,255,0.55); max-width:280px; line-height:1.5;">
-        The graphics context was lost. This happens when the browser hands the GPU to another app &mdash; closing a heavy tab, or a screen recorder encoding at the same time. The run is paused; it resumes by itself.
+  <div id="contextLost">
+    <div class="context-lost-box">
+      <div style="font-size:13px; color:var(--green); letter-spacing:0.18em; text-transform:uppercase; font-weight:700;">// RECONNECTING GPU</div>
+      <div style="margin-top:12px; font-size:11px; color:#888; line-height:1.6;">
+        Graphics context lost. The browser paused WebGL while sharing GPU resources. Execution will resume automatically.
       </div>
     </div>
   </div>
@@ -662,55 +1154,188 @@
   <!-- 6. IN-GAME HUD -->
   <div class="game-hud" id="gameHUD">
     <div class="hud-top-row">
-      <div class="hud-dist-box">
-        <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">Distance</span>
-        <div class="hud-dist" id="hudDistance">0<span>m</span></div>
+      <div class="hud-stat-item">
+        <div class="hud-dist-val" id="hudDistance">0<span>m</span></div>
       </div>
-      <div class="hud-dist-box">
-        <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">$VIBE</span>
-        <div class="hud-dist" id="hudCoins" style="color:#f5a623;">0</div>
+      <div class="hud-stat-item">
+        <div class="hud-coins-val" id="hudCoins">0</div>
       </div>
-      <div class="hud-dist-box" id="hudPowerupBox" style="display:none;">
-        <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">Power-up</span>
-        <div class="hud-dist" id="hudPowerup" style="color:#22e0c8;font-size:22px;"></div>
+      <div class="hud-stat-item" id="hudPowerupBox" style="display:none;">
+        <div class="hud-powerup-val" id="hudPowerup"></div>
       </div>
-      <!-- REKT DODGE charges: two pips, a filled one is a banked dodge. -->
-      <div class="hud-dist-box" id="hudDodgeBox" style="display:none;">
-        <span style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">Rekt Dodge</span>
-        <div class="hud-dist" id="hudDodge" style="color:#f5a623;font-size:18px;letter-spacing:2px;"></div>
+      <div class="hud-stat-item" id="hudDodgeBox" style="display:none;">
+        <div class="hud-dodge-val" id="hudDodge"></div>
       </div>
     </div>
-    <div class="control-hint" style="font-family:'JetBrains Mono'; font-size:12px; color:rgba(255,255,255,0.4); text-align:center;">
-      <span class="hint-keys">← Left | Right → | ↑ Jump | ↓ Slide | </span>↑↑ Dodge
+    <div class="control-hint">
+      A/D ← → // W JUMP // S SLIDE // W+W DODGE
     </div>
   </div>
 
   <!-- 7. GAME OVER SCREEN -->
   <div class="game-over-screen" id="gameOverScreen">
-    <h2 style="font-size: 36px; font-weight:800; color:#ff3b30; text-transform:uppercase; margin-bottom:4px;">Margin Called!</h2>
-    <p style="font-family:'JetBrains Mono'; font-size:12px; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1.5px;">Bear Market Liquidation</p>
+    <div class="new-best-badge" id="newBestBadge">► NEW BEST</div>
+    <h2 class="rekt-title" data-text="REKT." style="font-size:96px;font-weight:800;color:#fff;font-family:'Space Grotesk',sans-serif;letter-spacing:-2px;">REKT.</h2>
+    <p class="rekt-sub">MARGIN CALLED — BEAR MARKET LIQUIDATION</p>
 
     <div class="over-stat-card">
-      <div>
-        <div style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">Distance Run</div>
-        <div style="font-size:32px; font-weight:800;" id="overDist">0m</div>
+      <div class="stat-block">
+        <div class="stat-label">DISTANCE_RUN</div>
+        <div class="stat-val" id="overDist">0m</div>
       </div>
-      <div>
-        <div style="font-family:'JetBrains Mono'; font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase;">$VIBE Bagged</div>
-        <div style="font-size:32px; font-weight:800; color:#f5a623;" id="overCoins">0</div>
+      <div class="stat-block">
+        <div class="stat-label">$VIBE_BAGGED</div>
+        <div class="stat-val green" id="overCoins">0</div>
       </div>
     </div>
 
     <div class="over-btn-row">
-      <button class="btn-play" id="btnRestartRun" style="padding:14px 32px; font-size:16px;">▶ PLAY AGAIN</button>
-      <button class="wallet-btn" id="btnBackLobby" style="padding:14px 24px; border-radius:14px;">LOBBY</button>
+      <button class="btn-restart" id="btnRestartRun">PLAY_AGAIN</button>
+      <button class="btn-lobby" id="btnBackLobby">LOBBY</button>
     </div>
 
-    <button class="wallet-btn" id="btnShareX" style="margin-top:14px; background:#000; border-color:rgba(255,255,255,0.3); border-radius:12px; padding:10px 20px;">
-      𝕏 Share Score to @vibevibefun
-    </button>
+    <button class="btn-share" id="btnShareX">𝕏 POST_SCORE</button>
   </div>
 
+  <!-- Dynamic Feedback Elements -->
+  <div id="coinFlash" class="coin-flash"></div>
+
+  <div id="zoneBanner" class="zone-banner">
+    <span class="zone-banner-name"></span>
+    <span class="zone-banner-sub">// entering district</span>
+  </div>
+
+  <div class="touch-controls" id="touchControls">
+    <div class="touch-cluster">
+      <div class="touch-btn" id="touchJump">↑</div>
+      <div class="touch-btn" id="touchLeft">←</div>
+    </div>
+    <div class="touch-cluster">
+      <div class="touch-btn" id="touchSlide">↓</div>
+      <div class="touch-btn" id="touchRight">→</div>
+    </div>
+  </div>
+
+  <!-- Main ES Module Entry Point -->
   <script type="module" src="./src/main.js"></script>
+
+  <!-- Terminal UI Helpers & Micro-Interactions -->
+  <script>
+    window.__coinFlash = function() {
+      const el = document.getElementById('coinFlash');
+      if (!el) return;
+      el.classList.add('active');
+      setTimeout(() => el.classList.remove('active'), 120);
+    };
+
+    window.__showZoneBanner = function(name, sub) {
+      const b = document.getElementById('zoneBanner');
+      if (!b) return;
+      b.querySelector('.zone-banner-name').textContent = name;
+      b.querySelector('.zone-banner-sub').textContent = sub || '// entering district';
+      b.classList.add('active');
+      setTimeout(() => b.classList.remove('active'), 2200);
+    };
+
+    window.__animateStats = function(dist, coins) {
+      const distEl = document.getElementById('overDist');
+      const coinsEl = document.getElementById('overCoins');
+      const dur = 1200, start = performance.now();
+      function tick(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        distEl.textContent = Math.floor(dist * ease) + 'm';
+        coinsEl.textContent = Math.floor(coins * ease);
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    };
+
+    // Auto-detect GameOver screen activation to animate stats and check personal best
+    (function() {
+      const overScreen = document.getElementById('gameOverScreen');
+      if (overScreen) {
+        let wasActive = false;
+        const observer = new MutationObserver(() => {
+          const isActive = overScreen.classList.contains('active');
+          if (isActive && !wasActive) {
+            wasActive = true;
+            const distRaw = parseInt(document.getElementById('overDist')?.textContent || '0');
+            const coinsRaw = parseInt(document.getElementById('overCoins')?.textContent || '0');
+            if (distRaw > 0 || coinsRaw > 0) {
+              window.__animateStats(distRaw, coinsRaw);
+            }
+            // Check High Score
+            const best = window.__vrScope?.__store?.G?.bestDist || 0;
+            const dist = window.__vrScope?.__store?.G?.distance || 0;
+            const badge = document.getElementById('newBestBadge');
+            if (badge) {
+              if (dist >= best && dist > 10) {
+                badge.classList.add('show');
+              } else {
+                badge.classList.remove('show');
+              }
+            }
+          } else if (!isActive) {
+            wasActive = false;
+          }
+        });
+        observer.observe(overScreen, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      // Live monitoring for coin pickup flash and zone banners
+      let lastCoins = 0;
+      let lastDistrict = -1;
+      function monitorGame() {
+        if (window.__vrScope) {
+          const gCoins = window.__vrScope.__store?.G?.sessionCoins || 0;
+          if (gCoins > lastCoins && lastCoins !== 0) {
+            window.__coinFlash();
+          }
+          lastCoins = gCoins;
+
+          const currentDistIdx = window.__vrScope.__zone?.currentDistrictIndex?.();
+          if (currentDistIdx !== undefined && currentDistIdx !== lastDistrict) {
+            if (lastDistrict !== -1) {
+              const dObj = window.__vrScope.__zone?.currentDistrict?.();
+              if (dObj) window.__showZoneBanner(dObj.name || `ZONE ${currentDistIdx + 1}`, '// entering district');
+            }
+            lastDistrict = currentDistIdx;
+          }
+        }
+        requestAnimationFrame(monitorGame);
+      }
+      requestAnimationFrame(monitorGame);
+
+      // Mobile Touch Controls
+      document.getElementById('touchLeft')?.addEventListener('touchstart', (e) => {
+        e.preventDefault(); document.getElementById('touchLeft').classList.add('pressed');
+        window.__vrScope?.__act?.switchLane?.(-1);
+      }, { passive: false });
+      document.getElementById('touchLeft')?.addEventListener('touchend', () =>
+        document.getElementById('touchLeft').classList.remove('pressed'));
+
+      document.getElementById('touchRight')?.addEventListener('touchstart', (e) => {
+        e.preventDefault(); document.getElementById('touchRight').classList.add('pressed');
+        window.__vrScope?.__act?.switchLane?.(1);
+      }, { passive: false });
+      document.getElementById('touchRight')?.addEventListener('touchend', () =>
+        document.getElementById('touchRight').classList.remove('pressed'));
+
+      document.getElementById('touchJump')?.addEventListener('touchstart', (e) => {
+        e.preventDefault(); document.getElementById('touchJump').classList.add('pressed');
+        window.__vrScope?.__act?.jumpAction?.();
+      }, { passive: false });
+      document.getElementById('touchJump')?.addEventListener('touchend', () =>
+        document.getElementById('touchJump').classList.remove('pressed'));
+
+      document.getElementById('touchSlide')?.addEventListener('touchstart', (e) => {
+        e.preventDefault(); document.getElementById('touchSlide').classList.add('pressed');
+        window.__vrScope?.__act?.slideAction?.();
+      }, { passive: false });
+      document.getElementById('touchSlide')?.addEventListener('touchend', () =>
+        document.getElementById('touchSlide').classList.remove('pressed'));
+    })();
+  </script>
 </body>
 </html>
