@@ -27,5 +27,6 @@ export function restoreState() {
   const s = loadSave();
   G.walletAddress = s.wallet || '';
   G.totalSavedCoins = Number(s.coins || 0);
+  G.bestDist = Number(s.bestDist || 0);
   return s;
 }

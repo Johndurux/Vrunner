@@ -366,6 +366,39 @@
     }
     .roster-name { font-weight: 700; font-size: 16px; }
     .roster-status { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #00e5ff; }
+    /* A locked entry stays visible but reads as unavailable: dimmed avatar,
+       a lock glyph over it, and the outstanding requirement underneath. */
+    .roster-item.locked { cursor: not-allowed; border-color: rgba(255,255,255,0.04); }
+    .roster-item.locked:hover { transform: none; border-color: rgba(255,255,255,0.04); }
+    .roster-item.locked .roster-avatar { opacity: 0.32; filter: grayscale(1); }
+    .roster-item.locked .roster-name { color: rgba(255,255,255,0.45); }
+    .roster-item.locked .roster-status { color: #7a8296; }
+    .roster-lock {
+      position: absolute;
+      inset: 16px auto auto 50%;
+      transform: translateX(-50%);
+      font-size: 26px;
+      color: #8b93a7;
+      pointer-events: none;
+    }
+    .roster-item { position: relative; }
+    .roster-req {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .roster-req .done { color: #4dff9e; }
+    .roster-req .todo { color: #ffb454; }
+    .roster-new {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: #0b0d12;
+      background: #4dff9e;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
 
     /* Leaderboard Table */
     .lead-table {

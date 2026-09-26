@@ -10,13 +10,14 @@
 import { G, setPaused } from './state.js';
 import { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate } from './obstacles.js';
 import { bindInput } from './input.js';
-import { bindUi } from './ui.js';
+import { bindUi, bindRoster, openModal, closeModals, modals, renderRoster } from './ui.js';
+import { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked } from './unlock.js';
 import { camFeel, triggerScreenShake } from './camera.js';
 import { clock, MAX_DT } from './timing.js';
 import { puState, coinValue, activatePowerup, expirePowerup, runSpeedBoost, getPowerup } from './powerups.js';
 import { renderer, scene, camera, LANES, trackChunks, TOTAL_CHUNKS } from './scene.js';
 import { voxelCacheStats } from './voxel.js';
-import { restoreState } from './save.js';
+import { restoreState, loadSave, writeSave } from './save.js';
 import { roster, setCharacter } from './roster.js';
 import { update } from './update.js';
 import { startRunGame, returnToLobby } from './lifecycle.js';
@@ -75,6 +76,10 @@ window.__vrScope = {
   __ob: { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate },
   __scene: { scene, fog: scene.fog, camera, renderer, LANES, trackChunks, TOTAL_CHUNKS, voxelCacheStats },
   __cam: { camFeel, triggerScreenShake },
+  __unlock: { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked },
+  __roster: { setCharacter, roster },
+  __ui: { openModal, closeModals, modals, renderRoster },
+  __save: { loadSave, writeSave },
   __zone: { DISTRICTS, currentDistrict, currentDistrictIndex, applyDistrict, districtChange, districtReadout, __dressChunk: dressChunk }
 };
 
@@ -97,5 +102,6 @@ setCharacter(G.selectedCharIdx);
 // ui.js is a leaf: it takes the callbacks it needs from here, so ui -> lifecycle
 // and ui -> roster never become import cycles.
 bindUi({ startRunGame, returnToLobby, setCharacter });
+bindRoster(setCharacter);
 bindInput();
 animate();

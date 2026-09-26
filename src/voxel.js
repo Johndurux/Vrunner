@@ -28,6 +28,10 @@ function boxGeo(w, h, d) {
   let g = GEO_CACHE.get(key);
   if (!g) {
     g = new THREE.BoxGeometry(w, h, d);
+    // Marked so disposeObject() knows this buffer belongs to the cache and to
+    // every other mesh sharing these dimensions, and must not be freed with
+    // any single one of them.
+    g.userData.shared = true;
     GEO_CACHE.set(key, g);
   }
   return g;
@@ -38,6 +42,7 @@ function lambert(color) {
   let m = MAT_CACHE.get(key);
   if (!m) {
     m = new THREE.MeshLambertMaterial({ color });
+    m.userData.shared = true;
     MAT_CACHE.set(key, m);
   }
   return m;
@@ -96,6 +101,7 @@ export function neonBox(w, h, d, color, { x = 0, y = 0, z = 0 } = {}) {
   let m = MAT_CACHE.get(key);
   if (!m) {
     m = new THREE.MeshBasicMaterial({ color, transparent: true });
+    m.userData.shared = true;
     MAT_CACHE.set(key, m);
   }
   const mesh = new THREE.Mesh(boxGeo(w, h, d), m);

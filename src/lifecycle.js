@@ -17,6 +17,7 @@ import { clearEntityList } from './utils.js';
 import { createTrumpChaser, chaser } from './chaser.js';
 import { expirePowerup, puState } from './powerups.js';
 import { loadSave, writeSave } from './save.js';
+import { rosterStatus } from './unlock.js';
 import { renderLeaderboard } from './ui.js';
 import { setCharacter, lobbyStage } from './roster.js';
 import { spawnRow } from './spawn.js';
@@ -146,7 +147,25 @@ export function triggerGameOver() {
   }
   chaser.active = false;
 
+  // The unlock gates read G.totalSavedCoins and G.bestDist, so the in-memory
+  // figures are brought up to date here rather than left for the next reload
+  // to pick up out of localStorage. The snapshot is taken before this run's
+  // coins are counted, so only genuinely new unlocks get flagged as NEW.
+  const beforeCoins = G.totalSavedCoins;
+  const beforeDist = G.bestDist;
   G.totalSavedCoins += G.sessionCoins;
+  G.bestDist = Math.max(G.bestDist, Math.floor(G.distance));
+  const wasLocked = rosterStatus(beforeCoins, beforeDist)
+    .map((r) => r.unlocked);
+  const earned = rosterStatus(G.totalSavedCoins, G.bestDist)
+    .filter((r, i) => r.unlocked && !wasLocked[i])
+    .map((r) => r.character.id);
+  if (earned.length) {
+    const set = window.__vrJustEarned || new Set();
+    earned.forEach(id => set.add(id));
+    window.__vrJustEarned = set;
+  }
+
   const save = loadSave();
   const scores = Array.isArray(save.scores) ? save.scores.slice() : [];
   scores.push({
@@ -160,7 +179,7 @@ export function triggerGameOver() {
     coins: G.totalSavedCoins,
     wallet: G.walletAddress,
     scores: scores.slice(0, 10),
-    bestDist: Math.max(Number(save.bestDist || 0), Math.floor(G.distance))
+    bestDist: G.bestDist
   });
   renderLeaderboard();
   updateCoinHud();

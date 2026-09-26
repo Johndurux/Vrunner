@@ -23,6 +23,7 @@ export const G = {
   sessionCoins: 0,
   walletAddress: '',
   totalSavedCoins: 0,
+  bestDist: 0,
   selectedCharIdx: 0,
   // Scenery. zoneSpan is metres per district, districtIdx is the district the
   // run is currently dressed in, and nextDistrict is the index to swap to the

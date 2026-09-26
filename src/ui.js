@@ -7,6 +7,7 @@ import { CHARACTERS } from './characters.js';
 import { G, updateCoinHud } from './state.js';
 import { audio } from './audio.js';
 import { loadSave, writeSave } from './save.js';
+import { rosterStatus, UNLOCK_RULES } from './unlock.js';
 
 export const modals = {
   roster: document.getElementById('modalRoster'),
@@ -14,16 +15,76 @@ export const modals = {
   settings: document.getElementById('modalSettings')
 };
 
+// setCharacter is injected rather than imported so this module stays free of
+// the roster/character-build cycle, and so a locked tap is refused by the one
+// guard that every entry point shares.
+let selectCharacter = () => false;
+export function bindRoster(setCharacter) { selectCharacter = setCharacter; }
+
+/**
+ * Rebuild the roster modal from the current save.
+ *
+ * Called every time the modal is opened rather than once at boot, so progress
+ * banked during a run is reflected the moment the player looks. Each entry
+ * shows its own half of the two-part gate separately — a coin requirement met
+ * but a distance requirement outstanding should not read as simply "locked"
+ * with no sense of progress towards it.
+ */
+export function renderRoster() {
+  const rosterList = document.getElementById('rosterList');
+  if (!rosterList) return;
+  rosterList.innerHTML = '';
+  const justEarned = window.__vrJustEarned || new Set();
+  rosterStatus(G.totalSavedCoins, G.bestDist).forEach((row) => {
+    const c = row.character;
+    const item = document.createElement('div');
+    item.className = 'roster-item'
+      + (row.index === G.selectedCharIdx ? ' selected' : '')
+      + (row.unlocked ? '' : ' locked');
+    item.style.setProperty('--c', c.color);
+
+    const parts = [];
+    if (!row.unlocked) {
+      const rule = UNLOCK_RULES[c.id];
+      parts.push(
+        `<span class="${row.coinsMet ? 'done' : 'todo'}">`
+        + `${rule.coins} $VIBE</span>`,
+        `<span class="${row.distMet ? 'done' : 'todo'}">`
+        + `${rule.dist}m</span>`
+      );
+    }
+    const req = parts.length ? `<div class="roster-req">${parts.join('<br>')}</div>` : '';
+    const fresh = justEarned.has(c.id) ? '<div class="roster-new">NEW</div>' : '';
+
+    item.innerHTML = `
+      <div class="roster-avatar">${c.avatarChar}</div>
+      ${row.unlocked ? '' : '<div class="roster-lock">🔒</div>'}
+      <div class="roster-name">${c.name}</div>
+      <div class="roster-status">${row.status}</div>
+      ${req}
+      ${fresh}
+    `;
+    item.addEventListener('click', () => {
+      // setCharacter() refuses a locked character, so the modal stays open on
+      // that tap and the player can see what is still outstanding.
+      if (selectCharacter(row.index)) closeModals();
+    });
+    rosterList.appendChild(item);
+  });
+  if (justEarned.size) window.__vrJustEarned = new Set();
+}
+
 export function openModal(m) {
   audio.click();
+  // Rebuilt on open, not at boot: progress banked during the last run has to
+  // be visible the moment the player looks at the roster.
+  if (m === modals.roster) renderRoster();
   m.classList.add('open');
 }
 export function closeModals() {
   audio.click();
   Object.values(modals).forEach(m => m.classList.remove('open'));
 }
-
-export const rosterList = document.getElementById('rosterList');
 
 export function shortAddr(addr) {
   if (!addr || addr === 'you') return 'you';
@@ -116,21 +177,9 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
     setCharacter(nextIdx);
   });
 
-  // Modals
-  const modals = {
-    roster: document.getElementById('modalRoster'),
-    leaderboard: document.getElementById('modalLeaderboard'),
-    settings: document.getElementById('modalSettings')
-  };
-
-  function openModal(m) {
-    audio.click();
-    m.classList.add('open');
-  }
-  function closeModals() {
-    audio.click();
-    Object.values(modals).forEach(m => m.classList.remove('open'));
-  }
+  // The modal stack and its open/close helpers live at module scope; the
+  // earlier private copies here meant the roster nav button opened an empty
+  // modal whenever the inline build was removed.
 
   document.getElementById('navTwitter').addEventListener('click', () => {
     audio.click();
@@ -149,26 +198,6 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
   document.getElementById('navLeaderboard').addEventListener('click', () => openModal(modals.leaderboard));
   document.getElementById('navSettings').addEventListener('click', () => openModal(modals.settings));
   document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeModals));
-
-  // Populate Roster Modal
-  const rosterList = document.getElementById('rosterList');
-  CHARACTERS.forEach((c, idx) => {
-    const item = document.createElement('div');
-    item.className = 'roster-item' + (idx === G.selectedCharIdx ? ' selected' : '');
-    item.style.setProperty('--c', c.color);
-    item.innerHTML = `
-      <div class="roster-avatar">${c.avatarChar}</div>
-      <div class="roster-name">${c.name}</div>
-      <div class="roster-status">${c.unlocked ? 'UNLOCKED' : 'LOCKED'}</div>
-    `;
-    item.addEventListener('click', () => {
-      setCharacter(idx);
-      document.querySelectorAll('.roster-item').forEach(el => el.classList.remove('selected'));
-      item.classList.add('selected');
-      closeModals();
-    });
-    rosterList.appendChild(item);
-  });
 
   function shortAddr(addr) {
     if (!addr || addr === 'you') return 'you';

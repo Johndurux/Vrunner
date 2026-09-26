@@ -11,11 +11,15 @@ export function disposeObject(obj) {
   if (!obj) return;
   scene.remove(obj);
   obj.traverse(child => {
-    if (child.geometry) child.geometry.dispose();
+    // Resources handed out by voxel.js are shared between every mesh that
+    // asked for the same dimensions or colour, so disposing one would strip
+    // the GPU buffers out from under all the others. Anything the cache owns
+    // is flagged and left alone; only per-instance resources are freed.
+    if (child.geometry && !child.geometry.userData.shared) child.geometry.dispose();
     const mats = child.material
       ? (Array.isArray(child.material) ? child.material : [child.material])
       : [];
-    mats.forEach(m => m.dispose?.());
+    mats.forEach(m => { if (!m.userData.shared) m.dispose?.(); });
   });
 }
 
