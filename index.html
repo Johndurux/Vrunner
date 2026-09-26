@@ -127,7 +127,7 @@
     }
 
     /* ═══════════════════════════════════════════════
-       2. LOBBY DASHBOARD — Asymmetric Layout
+       2. LOBBY DASHBOARD — Asymmetric Layout & Ambient Energy
     ═══════════════════════════════════════════════ */
     .dashboard-ui {
       position: absolute;
@@ -139,6 +139,93 @@
     .dashboard-ui.hidden {
       opacity: 0;
       pointer-events: none;
+    }
+
+    /* Lobby ambient pulse — purple glow behind character */
+    .lobby-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(255, 107, 0, 0.07) 0%,
+        rgba(100, 0, 200, 0.04) 40%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 2;
+      animation: lobbyPulse 3.5s ease-in-out infinite;
+    }
+    @keyframes lobbyPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.6; }
+      50%       { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    }
+
+    /* Floating particle dots */
+    .lobby-particles {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .lp {
+      position: absolute;
+      border-radius: 50%;
+      animation: floatUp linear infinite;
+      opacity: 0;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0)   scale(1);   opacity: 0; }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.3; }
+      100% { transform: translateY(-80vh) scale(0.4); opacity: 0; }
+    }
+
+    /* Ticker tape at very bottom of lobby */
+    .lobby-ticker {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 12;
+      height: 28px;
+      background: rgba(255, 107, 0, 0.08);
+      border-top: 1px solid rgba(255, 107, 0, 0.2);
+      overflow: hidden;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .ticker-inner {
+      display: flex;
+      gap: 0;
+      white-space: nowrap;
+      animation: tickerScroll 22s linear infinite;
+    }
+    @keyframes tickerScroll {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+    .ticker-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 0 32px;
+      color: rgba(255, 107, 0, 0.7);
+    }
+    .ticker-item.highlight {
+      color: var(--yellow);
+    }
+    .ticker-sep {
+      color: rgba(255,255,255,0.15);
+      padding: 0 8px;
     }
 
     /* Character Name Display: Top-Left */
@@ -168,6 +255,40 @@
       text-transform: uppercase;
       margin-top: 8px;
     }
+
+    /* Lobby stats strip — mid-left */
+    .lobby-stats-strip {
+      position: absolute;
+      left: 28px;
+      bottom: 170px;        /* sits above the PLAY button */
+      z-index: 11;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .lss-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .lss-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      min-width: 60px;
+    }
+    .lss-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--white);
+    }
+    .lss-val.orange { color: var(--orange); }
+    .lss-val.yellow { color: var(--yellow); }
 
     /* Switcher Arrows */
     .char-switcher {
@@ -251,7 +372,7 @@
       font-size: 12px;
       letter-spacing: 2px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: rgba(255, 255, 255, 0.55);
       background: none;
       border: none;
       cursor: pointer;
@@ -260,6 +381,14 @@
     }
     .menu-item:hover {
       color: var(--white);
+    }
+    .menu-item::after {
+      content: ' ›';
+      opacity: 0.4;
+    }
+    .menu-item:hover::after {
+      opacity: 1;
+      color: var(--orange);
     }
 
     /* ═══════════════════════════════════════════════
@@ -774,22 +903,22 @@
 
     .btn-share {
       margin-top: 20px;
-      font-family: var(--font-mono);
+      font-family: 'Space Grotesk', sans-serif;
       font-weight: 700;
-      font-size: 11px;
+      font-size: 12px;
       letter-spacing: 2px;
-      color: var(--muted);
-      background: none;
+      color: #000;
+      background: var(--yellow);
       border: none;
-      border-bottom: 1px solid var(--gray);
-      padding-bottom: 3px;
+      border-radius: 4px;
+      padding: 10px 24px;
       cursor: pointer;
       text-transform: uppercase;
-      transition: color 0.15s, border-color 0.15s;
+      transition: transform 0.1s, opacity 0.15s;
     }
     .btn-share:hover {
-      color: var(--white);
-      border-color: var(--white);
+      opacity: 0.88;
+      transform: scale(1.03);
     }
 
     /* ═══════════════════════════════════════════════
@@ -926,9 +1055,10 @@
     /* Responsive Overrides */
     @media (max-width: 640px) {
       .hero-name { font-size: 48px; }
-      .play-box { bottom: 80px; left: 20px; }
+      .lobby-stats-strip { bottom: 155px; left: 20px; }
+      .play-box { bottom: 75px; left: 20px; }
       .btn-play { min-width: 160px; height: 60px; font-size: 18px; padding: 0 24px; }
-      .menu-stack { bottom: 80px; right: 20px; }
+      .menu-stack { bottom: 75px; right: 20px; }
       .over-stats { gap: 30px; margin: 28px auto; }
       .stat-val { font-size: 48px; }
       .stat-val-coins svg { width: 28px; height: 28px; }
@@ -957,10 +1087,61 @@
 
   <!-- 2. LOBBY DASHBOARD UI (ASYMMETRIC) -->
   <div class="dashboard-ui" id="dashboardUI">
+    <!-- Ambient Pulse Glow behind character -->
+    <div class="lobby-glow" id="lobbyGlow"></div>
+
+    <!-- Floating Particles -->
+    <div class="lobby-particles" id="lobbyParticles"></div>
+
+    <!-- Ticker Tape at bottom of lobby -->
+    <div class="lobby-ticker">
+      <div class="ticker-inner">
+        <span class="ticker-item highlight">$VPLAY</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">ROBINHOOD CHAIN #46630</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item highlight">@META_ALCHEMIST</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">VIBE/VIBE TESTNET</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item highlight">RUN · EARN · CONTRIBUTE</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">VIBEVIBE.FUN</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item highlight">$VPLAY</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">ROBINHOOD CHAIN #46630</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item highlight">@META_ALCHEMIST</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">VIBE/VIBE TESTNET</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item highlight">RUN · EARN · CONTRIBUTE</span>
+        <span class="ticker-sep">|</span>
+        <span class="ticker-item">VIBEVIBE.FUN</span>
+      </div>
+    </div>
+
     <!-- Top-Left Character Meta -->
     <div class="hero-meta">
       <div class="hero-name" id="lobbyHeroName">ARMOR</div>
       <div class="hero-role" id="lobbyHeroRole">Gold Mecha · Glow Visor</div>
+    </div>
+
+    <!-- Mid-Left Lobby Stats Strip -->
+    <div class="lobby-stats-strip" id="lobbyStatsStrip">
+      <div class="lss-row">
+        <span class="lss-label">BEST</span>
+        <span class="lss-val" id="lobbyBestDist">0m</span>
+      </div>
+      <div class="lss-row">
+        <span class="lss-label">EARNED</span>
+        <span class="lss-val yellow" id="lobbyTotalCoins">⬡ 0 $VPLAY</span>
+      </div>
+      <div class="lss-row">
+        <span class="lss-label">CHAIN</span>
+        <span class="lss-val orange" style="font-size:13px; letter-spacing:1px;">RH #46630</span>
+      </div>
     </div>
 
     <!-- Switcher Arrows -->
@@ -1113,7 +1294,7 @@
         <button class="btn-lobby" id="btnBackLobby">LOBBY</button>
       </div>
 
-      <button class="btn-share" id="btnShareX">𝕏 POST TO @VIBEVIBEFUN</button>
+      <button class="btn-share" id="btnShareX">𝕏 SHARE YOUR RUN</button>
     </div>
   </div>
 
@@ -1170,6 +1351,64 @@
     };
 
     (function() {
+      // Spawn floating particles in lobby
+      (function spawnParticles() {
+        const container = document.getElementById('lobbyParticles');
+        if (!container) return;
+        const colors = ['#FF6B00', '#FFD000', '#7c5cff', '#FF2244', '#00DDFF'];
+        const sizes  = [2, 3, 3, 4, 2, 3];
+        for (let i = 0; i < 18; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'lp';
+          const size = sizes[i % sizes.length];
+          const color = colors[i % colors.length];
+          const left  = 15 + Math.random() * 70;   // 15%–85% horizontally
+          const dur   = 6 + Math.random() * 10;    // 6s–16s
+          const delay = -Math.random() * 14;       // stagger start
+          dot.style.cssText = `
+            width:${size}px; height:${size}px;
+            left:${left}%;
+            bottom: ${10 + Math.random() * 20}%;
+            background:${color};
+            box-shadow: 0 0 ${size * 3}px ${color};
+            animation-duration:${dur}s;
+            animation-delay:${delay}s;
+          `;
+          container.appendChild(dot);
+        }
+        // Hide particles + glow + ticker when game starts, show again in lobby
+        const dash = document.getElementById('dashboardUI');
+        if (dash) {
+          new MutationObserver(() => {
+            const hidden = dash.classList.contains('hidden');
+            container.style.display = hidden ? 'none' : 'block';
+            const glow = document.getElementById('lobbyGlow');
+            if (glow) glow.style.display = hidden ? 'none' : 'block';
+            const ticker = document.querySelector('.lobby-ticker');
+            if (ticker) ticker.style.display = hidden ? 'none' : 'flex';
+          }).observe(dash, { attributes: true, attributeFilter: ['class'] });
+        }
+      })();
+
+      // Update lobby stats display
+      function refreshLobbyStats() {
+        const G = window.__vrScope?.__store?.G;
+        if (!G) return;
+        const bestEl   = document.getElementById('lobbyBestDist');
+        const coinsEl  = document.getElementById('lobbyTotalCoins');
+        if (bestEl)  bestEl.textContent  = (G.bestDist || 0) + 'm';
+        if (coinsEl) coinsEl.textContent = '⬡ ' + (G.totalSavedCoins || 0) + ' $VPLAY';
+      }
+      setInterval(refreshLobbyStats, 2000);
+      refreshLobbyStats();
+
+      const dashEl = document.getElementById('dashboardUI');
+      if (dashEl) {
+        new MutationObserver(() => {
+          if (!dashEl.classList.contains('hidden')) refreshLobbyStats();
+        }).observe(dashEl, { attributes: true, attributeFilter: ['class'] });
+      }
+
       const overScreen = document.getElementById('gameOverScreen');
       if (overScreen) {
         let wasActive = false;

@@ -60,7 +60,7 @@ export function startRunGame() {
   lobbyStage.visible = false;
   G.playerLane = 1;
   G.targetX = 0;
-  G.runSpeed = 18;
+  G.runSpeed = 20;
   G.distance = 0;
   G.sessionCoins = 0;
   // The run always opens in the first district, so the scenery and the sky
@@ -81,7 +81,8 @@ export function startRunGame() {
   clearEntityList(activeItems);
 
   trackChunks.forEach((c, idx) => { c.position.z = -idx * CHUNK_LEN; });
-  for (let z = -50; z > -CHUNK_LEN * TOTAL_CHUNKS; z -= 16) spawnRow(z);
+  // Spawn first coin very close so player gets immediate feedback
+  for (let z = -18; z > -CHUNK_LEN * TOTAL_CHUNKS; z -= 12) spawnRow(z);
 
   if (chaser.mesh) { disposeObject(chaser.mesh); chaser.mesh = null; }
   chaser.mesh = createTrumpChaser();
@@ -108,7 +109,7 @@ export function startRunGame() {
       if (chaser.mesh) chaser.mesh.visible = true;
       document.getElementById('gameHUD').classList.add('active');
     }
-  }, 700);
+  }, 500);
 }
 
 export function returnToLobby() {
