@@ -227,16 +227,18 @@ export function buildRailChunk(zPos) {
 
   // === OVERHEAD TUNNEL ARCHES every 18 units ===
   for (let z = -CHUNK_LEN / 2 + 5; z < CHUNK_LEN / 2; z += 18) {
-    // Raised pillars to height 8.0 (y=4.0) so the beam sits at y=8.0
-    const archPillarL = vox(0.45, 8.0, 0.45, 0x1e2334, { x: -4.85, y: 4.0, z });
-    const archPillarR = vox(0.45, 8.0, 0.45, 0x1e2334, { x: 4.85, y: 4.0, z });
-    const archBeam = vox(9.8, 0.5, 0.5, 0x1e2334, { x: 0, y: 8.0, z });
+    // Tiang dinaikkan jadi tinggi 11.0 (pusat Y = 5.5)
+    const archPillarL = vox(0.45, 11.0, 0.45, 0x1e2334, { x: -4.85, y: 5.5, z });
+    const archPillarR = vox(0.45, 11.0, 0.45, 0x1e2334, { x: 4.85, y: 5.5, z });
+    
+    // Balok melintang naik drastis ke Y = 11.0
+    const archBeam = vox(9.8, 0.5, 0.5, 0x1e2334, { x: 0, y: 11.0, z });
     
     const neonColor = (Math.floor(z / 18) % 2 === 0) ? 0x00e5ff : 0xe0643a;
-    const neonStrip = vox(9.6, 0.12, 0.14, neonColor, { x: 0, y: 7.7, z });
+    const neonStrip = vox(9.6, 0.12, 0.14, neonColor, { x: 0, y: 10.7, z });
     neonStrip.material = new THREE.MeshBasicMaterial({ color: neonColor });
-    const sigL = vox(0.32, 0.32, 0.32, neonColor, { x: -4.85, y: 7.5, z });
-    const sigR = vox(0.32, 0.32, 0.32, neonColor, { x: 4.85, y: 7.5, z });
+    const sigL = vox(0.32, 0.32, 0.32, neonColor, { x: -4.85, y: 10.5, z });
+    const sigR = vox(0.32, 0.32, 0.32, neonColor, { x: 4.85, y: 10.5, z });
     sigL.material = new THREE.MeshBasicMaterial({ color: neonColor });
     sigR.material = new THREE.MeshBasicMaterial({ color: neonColor });
     
@@ -247,7 +249,6 @@ export function buildRailChunk(zPos) {
       const bannerData = CAMPAIGN_OVERHEAD_DATA[_overheadIdx % CAMPAIGN_OVERHEAD_DATA.length];
       _overheadIdx++;
 
-      // Width: 8.6, Height: 2.2, Depth: 0.2
       const bannerGeo = new THREE.BoxGeometry(8.6, 2.2, 0.2);
       const bannerTex = makeOverheadBannerTexture(bannerData);
       
@@ -256,13 +257,14 @@ export function buildRailChunk(zPos) {
       const bannerMats = [matFrame, matFrame, matFrame, matFrame, matFace, matFace];
       const bannerMesh = new THREE.Mesh(bannerGeo, bannerMats);
       
-      // Raised banner to y=6.8 (bottom edge is 5.7, safely clearing the camera at y=5.5)
-      bannerMesh.position.set(0, 6.8, z); 
+      // Banner dinaikkan ke Y = 9.5 (ujung bawah ada di Y = 8.4)
+      // Jauh di atas batas max lompatan karakter (Y = 3.5 - 4.5)
+      bannerMesh.position.set(0, 9.5, z); 
       g.add(bannerMesh);
 
-      // Suspension cables linking beam to banner plate
-      const cableL = vox(0.08, 0.9, 0.08, 0x444455, { x: -3.2, y: 7.6, z });
-      const cableR = vox(0.08, 0.9, 0.08, 0x444455, { x: 3.2, y: 7.6, z });
+      // Kabel gantung ditarik dari balok (Y=11.0) ke banner (Y=9.5)
+      const cableL = vox(0.08, 1.5, 0.08, 0x444455, { x: -3.2, y: 10.3, z });
+      const cableR = vox(0.08, 1.5, 0.08, 0x444455, { x: 3.2, y: 10.3, z });
       g.add(cableL, cableR);
     }
   }
