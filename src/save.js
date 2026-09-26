@@ -28,5 +28,9 @@ export function restoreState() {
   G.walletAddress = s.wallet || '';
   G.totalSavedCoins = Number(s.coins || 0);
   G.bestDist = Number(s.bestDist || 0);
+  // The selection has to be read back too, or every reload lands on the
+  // default character and the roster pick looks like it never took.
+  // A save written by an older build has no key here, hence the || 0.
+  G.selectedCharIdx = Number(s.selectedCharIdx || 0);
   return s;
 }

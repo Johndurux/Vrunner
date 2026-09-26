@@ -644,6 +644,21 @@
     </div>
   </div>
 
+  <!-- 6b. GPU CONTEXT LOSS NOTICE -->
+  <!-- Covers the canvas when the WebGL context is lost, so a frozen 3D view
+       cannot be mistaken for a live run: the HUD counter would otherwise keep
+       climbing while nothing is being drawn. -->
+  <div id="contextLost" style="position:fixed; inset:0; z-index:60; display:none;
+       align-items:center; justify-content:center; text-align:center;
+       background:rgba(8,10,14,0.88); backdrop-filter:blur(10px);">
+    <div>
+      <div style="font-size:15px; color:#00e5ff; letter-spacing:0.14em; text-transform:uppercase;">Reconnecting…</div>
+      <div style="margin-top:10px; font-size:12px; color:rgba(255,255,255,0.55); max-width:280px; line-height:1.5;">
+        The graphics context was lost. This happens when the browser hands the GPU to another app &mdash; closing a heavy tab, or a screen recorder encoding at the same time. The run is paused; it resumes by itself.
+      </div>
+    </div>
+  </div>
+
   <!-- 6. IN-GAME HUD -->
   <div class="game-hud" id="gameHUD">
     <div class="hud-top-row">

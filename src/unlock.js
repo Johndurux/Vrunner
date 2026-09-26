@@ -29,6 +29,27 @@ export const UNLOCK_RULES = {
   mrhat:    { coins: 1500, dist: 2600 },
 };
 
+/**
+ * Development bypass for the gates above.
+ *
+ * The thresholds are the real progression curve and stay exactly as they are;
+ * this only makes them stop applying while the roster is being worked on, so
+ * a locked body can be inspected without first banking 90 coins and a 260m
+ * run. It reads the query string, so a build that is merely *hosted* on a
+ * public URL is still gated -- it takes `?unlock=all`, and the deployed
+ * alias does not carry it.
+ *
+ * `window.__vrUnlockAll()` is the console equivalent, for a session that was
+ * already loaded without the flag.
+ * @returns {boolean} whether the bypass is currently active
+ */
+function bypassActive() {
+  try {
+    if (new URLSearchParams(location.search).get('unlock') === 'all') return true;
+  } catch { /* no location in this context */ }
+  return window.__vrUnlockAllOn === true;
+}
+
 const LABEL = {
   coins: (n) => `${n} $VIBE`,
   dist: (n) => `${n}m`,
@@ -41,6 +62,7 @@ const LABEL = {
  * @param {number} dist  best single-run distance, metres
  */
 export function isUnlocked(character, coins, dist) {
+  if (bypassActive()) return true;
   const rule = UNLOCK_RULES[character.id];
   if (!rule) return true;
   return coins >= rule.coins && dist >= rule.dist;

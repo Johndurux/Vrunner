@@ -37,6 +37,46 @@ window.addEventListener('blur', () => setPaused(true));
 window.addEventListener('focus', () => setPaused(false));
 document.addEventListener('visibilitychange', () => setPaused(document.hidden));
 
+// ── WEBGL CONTEXT LOSS ─────────────────────────────────────────────────────
+// Chromium drops a WebGL context when the GPU process is overwhelmed, and the
+// most reliable way to make that happen to a full-rate game is to run a screen
+// recorder at the same time: the encoder and the renderer contend for the same
+// GPU, and once the process is over budget the browser takes the context back
+// rather than dropping frames. The symptom is a frozen or half-drawn canvas
+// while the page's own JavaScript keeps running.
+//
+// MAX_DT does not help here. It clamps the simulation's delta time, so a slow
+// frame is survived, but once the context is gone renderer.render() draws
+// nothing at all -- no delta time to clamp. Without these handlers the run
+// silently continues on a dead canvas and the distance counter climbs anyway.
+const contextLostEl = document.getElementById('contextLost');
+let contextLost = false;
+
+function showContextNotice(show) {
+  if (contextLostEl) contextLostEl.style.display = show ? 'flex' : 'none';
+}
+
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  // preventDefault is what makes the browser attempt a restore at all; without
+  // it the context is gone for good and webglcontextrestored never fires.
+  e.preventDefault();
+  contextLost = true;
+  setPaused(true);
+  showContextNotice(true);
+}, false);
+
+renderer.domElement.addEventListener('webglcontextrestored', () => {
+  // Three.js rebuilds its own GPU state on this event; the scene graph and
+  // every mesh in it survive, so the only thing to do is resume.
+  contextLost = false;
+  showContextNotice(false);
+  // Only resume if the page is actually the one being looked at. A context
+  // loss often rides along with the tab losing focus, and unpausing there
+  // would start the run again inside a tab nobody can see -- which then runs
+  // on to a game over the moment the window comes back.
+  if (!document.hidden) setPaused(false);
+}, false);
+
 /** Snapshot of the state the behavioural tests read. */
 function debugState() {
   return {
@@ -83,6 +123,19 @@ window.__vrRun = (code) => {
 };
 window.__vrState = debugState;
 
+/**
+ * Turn the character gates off for this session, so a locked body can be
+ * inspected without banking the coins and distance it normally needs. The
+ * same thing happens at load time with `?unlock=all` in the URL. Passing
+ * false puts the gates back; nothing here writes to the save, so a reload
+ * returns to the real progression state.
+ * @param {boolean} [on=true]
+ */
+window.__vrUnlockAll = function (on = true) {
+  window.__vrUnlockAllOn = !!on;
+  return window.__vrUnlockAllOn;
+};
+
 // Modules the automated power-up tests need to reach, grouped as the harness
 // expects them. Test-only surface: nothing in the game imports this.
 // Test-only surface. Built inside a try/catch because a single wrong name here
@@ -119,6 +172,9 @@ window.__vrScope = {
 
 function animate() {
   requestAnimationFrame(animate);
+  // Skip the draw while the context is gone: calling into a lost context
+  // throws in some drivers and is wasted work in the rest.
+  if (contextLost) return;
   update(Math.min(clock.getDelta(), MAX_DT), roster.mesh);
   renderer.render(scene, camera);
 }

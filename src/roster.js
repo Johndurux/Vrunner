@@ -53,5 +53,8 @@ export function setCharacter(idx) {
   document.querySelectorAll('.roster-item').forEach((el, i) => {
     el.classList.toggle('selected', i === idx);
   });
+  // Persist only after the swap actually happened. Writing on the locked
+  // path would store a character the player does not have equipped.
+  writeSave({ selectedCharIdx: idx });
   return true;
 }
