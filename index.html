@@ -500,9 +500,10 @@
     }
   
 
-    /* TEMP: wallet disabled, fokus gameplay dulu -- the control hint
-       was clipped on 360-420px portrait screens. Scale it with the
-       viewport instead of a fixed size. */
+    /* Small-viewport pass. The control hint was clipped on 360-420px portrait
+       screens, so it scales with the viewport instead of a fixed size, and the
+       header cluster and menu bar are trimmed to stop the page overflowing
+       sideways. The menu keeps its icons; only the text labels go. */
     @media (max-width: 480px) {
       .control-hint { font-size: 9px !important; letter-spacing: 0.2px !important; }
       .control-hint .hint-keys { display: none; }
