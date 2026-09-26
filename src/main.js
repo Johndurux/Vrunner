@@ -10,7 +10,7 @@
 import { G, setPaused } from './state.js';
 import { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate } from './obstacles.js';
 import { bindInput } from './input.js';
-import { dodgeAction, switchLane } from './actions.js';
+import { dodgeAction, switchLane, slideAction, jumpAction } from './actions.js';
 import { bindUi, bindRoster, openModal, closeModals, modals, renderRoster } from './ui.js';
 import { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked } from './unlock.js';
 import { camFeel, triggerScreenShake, resetCameraFeel } from './camera.js';
@@ -105,7 +105,7 @@ window.__vrScope = {
   __ob: { activeObstacles, activeItems, createRedCandle, createCoin, createComboGate },
   __scene: { scene, fog: scene.fog, camera, renderer, LANES, trackChunks, TOTAL_CHUNKS, voxelCacheStats },
   __cam: { camFeel, triggerScreenShake, resetCameraFeel },
-  __act: { dodgeAction, switchLane },
+  __act: { dodgeAction, switchLane, slideAction, jumpAction, startRunGame, returnToLobby },
   __unlock: { UNLOCK_RULES, isUnlocked, meetsPart, requirementText, shortfall, rosterStatus, newlyUnlocked },
   __roster: { setCharacter, roster },
   __ui: { openModal, closeModals, modals, renderRoster },

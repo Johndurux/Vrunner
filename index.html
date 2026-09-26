@@ -72,6 +72,8 @@
       align-items: center;
       gap: 12px;
       pointer-events: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .coin-pill {
@@ -497,16 +499,6 @@
       gap: 12px;
     }
   
-    /* ============================================================
-       TEMP: wallet disabled, fokus gameplay dulu
-       The wallet flow, the chain pill and the Target Network row
-       are hidden with display:none rather than removed, so they
-       come back by deleting this one block. Leaderboard and
-       $VIBE coins are untouched and keep working off localStorage.
-       ============================================================ */
-    #connectWalletBtn,
-    .chain-pill { display: none !important; }
-    .net-row { display: none !important; }
 
     /* TEMP: wallet disabled, fokus gameplay dulu -- the control hint
        was clipped on 360-420px portrait screens. Scale it with the
@@ -514,6 +506,18 @@
     @media (max-width: 480px) {
       .control-hint { font-size: 9px !important; letter-spacing: 0.2px !important; }
       .control-hint .hint-keys { display: none; }
+      /* Chain pill + wallet button share the header with the coin pill; at
+         phone widths the three together overflow, so drop the chain label
+         and keep coin + connect. */
+      .chain-pill { display: none !important; }
+      .wallet-btn { padding: 8px 12px; font-size: 11px; }
+      .coin-pill { padding: 8px 12px; font-size: 11px; }
+      /* The four menu buttons need 585px and overflow a 400px phone, which
+         forces a horizontal scroll. On narrow screens keep the icons and drop
+         the text labels; the emoji still identify each button. */
+      .menu-bar { gap: 4px; padding: 6px 8px; }
+      .menu-item { padding: 8px 10px; font-size: 12px; }
+      .menu-label { display: none; }
     }
 </style>
 </head>
@@ -561,16 +565,20 @@
     <!-- DASHBOARD MENU NAVIGATION -->
     <div class="menu-bar">
       <button class="menu-item" id="navRoster">
-        <span>👥</span> Characters
+        <span>👥</span>
+        <span class="menu-label">Characters</span>
       </button>
       <button class="menu-item" id="navLeaderboard">
-        <span>🏆</span> Leaderboard
+        <span>🏆</span>
+        <span class="menu-label">Leaderboard</span>
       </button>
       <button class="menu-item" id="navSettings">
-        <span>⚙️</span> Settings
+        <span>⚙️</span>
+        <span class="menu-label">Settings</span>
       </button>
       <button class="menu-item" id="navTwitter">
-        <span>𝕏</span> @vibevibefun
+        <span>𝕏</span>
+        <span class="menu-label">@vibevibefun</span>
       </button>
     </div>
   </div>
