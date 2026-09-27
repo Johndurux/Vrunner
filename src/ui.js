@@ -248,7 +248,7 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
 
   // Share on Twitter / X
   document.getElementById('btnShareX').addEventListener('click', () => {
-    const text = `Just ran ${Math.floor(G.distance)}m and banked ${G.sessionCoins} $VPLAY in Vibe Runner on @vibevibefun Robinhood Chain testnet! 🏃💨 Can you beat my highscore? #RobinhoodChain #VibeVibe`;
+    const text = `Just ran ${Math.floor(G.distance)}m and banked ${G.sessionCoins} $VPLAY in Vibe Runner on @vibevibefun Robinhood Chain testnet! 🏃💨 Can you beat my highscore? #RobinhoodChain #VibeVibe https://vrunner.vercel.app/`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   });
 }

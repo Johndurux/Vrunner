@@ -3,7 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>vibe/runner · Degen Arcade</title>
+  <title>vibe/runner · Degen Arcade on Robinhood Chain</title>
+  <meta name="title" content="vibe/runner · Degen Arcade on Robinhood Chain">
+  <meta name="description" content="3D Endless Arcade Runner on Robinhood Chain Testnet #46630. Dodge candles, jump margin barriers, and bank $VPLAY!">
+
+  <!-- Open Graph / Discord / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vrunner.vercel.app/">
+  <meta property="og:title" content="vibe/runner · Degen Arcade on Robinhood Chain">
+  <meta property="og:description" content="3D Endless Arcade Runner on Robinhood Chain Testnet #46630. Dodge candles, jump margin barriers, and bank $VPLAY!">
+  <meta property="og:image" content="https://vrunner.vercel.app/og-image.png">
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://vrunner.vercel.app/">
+  <meta name="twitter:title" content="vibe/runner · Degen Arcade on Robinhood Chain">
+  <meta name="twitter:description" content="3D Endless Arcade Runner on Robinhood Chain Testnet #46630. Dodge candles, jump margin barriers, and bank $VPLAY!">
+  <meta name="twitter:image" content="https://vrunner.vercel.app/og-image.png">
+  <meta name="twitter:site" content="@vibevibefun">
+  <meta name="twitter:creator" content="@META_ALCHEMIST">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='12 2 21 7.2 21 16.8 12 22 3 16.8 3 7.2 12 2' fill='%23FF6B00'/><text x='12' y='16' font-size='12' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%23000'>V</text></svg>">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@700;800&display=swap">
@@ -936,7 +958,7 @@
       pointer-events: auto;
     }
     @media (max-width: 640px) {
-      .touch-controls {
+      .touch-controls.active {
         display: grid;
       }
     }
@@ -1138,10 +1160,24 @@
 
     /* Responsive Overrides */
     @media (max-width: 640px) {
-      .hero-name { font-size: 48px; }
+      .campaign-bar {
+        top: 52px;
+        padding: 4px 12px;
+        font-size: 9.5px;
+        max-width: 90vw;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .hero-meta {
+        top: 88px;
+        left: 18px;
+      }
+      .hero-name { font-size: 34px; }
+      .hero-role { font-size: 10px; }
       .lobby-stats-strip { bottom: 155px; left: 20px; }
       .play-box { bottom: 75px; left: 20px; }
-      .btn-play { min-width: 160px; height: 60px; font-size: 18px; padding: 0 24px; }
+      .btn-play { min-width: 150px; height: 56px; font-size: 16px; padding: 0 20px; }
       .menu-stack { bottom: 75px; right: 20px; }
       .over-stats { gap: 30px; margin: 28px auto; }
       .stat-val { font-size: 48px; }

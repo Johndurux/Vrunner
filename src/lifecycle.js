@@ -108,6 +108,7 @@ export function startRunGame() {
       // the track on its way to position.
       if (chaser.mesh) chaser.mesh.visible = true;
       document.getElementById('gameHUD').classList.add('active');
+      document.getElementById('touchControls')?.classList.add('active');
       audio.startBgm();
     }
   }, 500);
@@ -125,6 +126,7 @@ export function returnToLobby() {
   resetPlayerMotion();
   document.getElementById('gameHUD').classList.remove('active');
   document.getElementById('gameOverScreen').classList.remove('active');
+  document.getElementById('touchControls')?.classList.remove('active');
   document.getElementById('dashboardUI').classList.remove('hidden');
   document.querySelector('.top-nav').style.display = 'flex';
 
@@ -151,6 +153,7 @@ export function triggerGameOver() {
   G.gameState = 'GAMEOVER';
   audio.crash();
   audio.stopBgm();
+  document.getElementById('touchControls')?.classList.remove('active');
   resetPlayerMotion();
   // Stop the power-up timers and pull the hoverboard glow down, so the
   // death screen is not left with a running countdown and a glowing shield.
