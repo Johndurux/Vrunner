@@ -3,7 +3,7 @@
 // wallet button and the leaderboard table.
 //
 
-import { CHARACTERS } from './characters.js';
+import { CHARACTERS, getCharacterSvg } from './characters.js';
 import { G, updateCoinHud } from './state.js';
 import { audio } from './audio.js';
 import { loadSave, writeSave } from './save.js';
@@ -57,7 +57,7 @@ export function renderRoster() {
     const fresh = justEarned.has(c.id) ? '<div class="roster-new">NEW</div>' : '';
 
     item.innerHTML = `
-      <div class="roster-avatar">${c.avatarChar}</div>
+      <div class="roster-avatar">${getCharacterSvg(c)}</div>
       ${row.unlocked ? '' : '<div class="roster-lock">🔒</div>'}
       <div class="roster-name">${c.name}</div>
       <div class="roster-status">${row.status}</div>
@@ -187,8 +187,6 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
   });
 
   const soundBtn = document.getElementById('toggleSoundBtn');
-  // Apply the stored preference before wiring the handler, so a reload does
-  // not show a stale ON label over a muted engine.
   if (G.soundOn !== undefined) {
     audio.enabled = G.soundOn;
     soundBtn.textContent = audio.enabled ? 'ON' : 'OFF';
@@ -197,18 +195,35 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
     audio.enabled = !audio.enabled;
     G.soundOn = audio.enabled;
     this.textContent = audio.enabled ? 'ON' : 'OFF';
-    // Persisted so a muted player stays muted across a reload, which is what
-    // save.js claims it does.
     writeSave({ sound: audio.enabled });
     if (audio.enabled) {
       audio.init();
       audio.click();
+      if (G.gameState === 'RUNNING') audio.startBgm();
+    } else {
+      audio.stopBgm();
     }
   });
   document.getElementById('navRoster').addEventListener('click', () => openModal(modals.roster));
   document.getElementById('navLeaderboard').addEventListener('click', () => openModal(modals.leaderboard));
   document.getElementById('navSettings').addEventListener('click', () => openModal(modals.settings));
   document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeModals));
+
+  function shortAddr(addr) {
+    if (!addr || addr === 'you') return 'you';
+    if (addr.startsWith('DEMO-')) return addr; // placeholder label, keep whole
+    if (addr.includes('...')) return addr;
+    if (addr.length < 12) return addr;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  function paintWalletBtn() {
+    const btn = document.getElementById('connectWalletBtn');
+    if (!G.walletAddress) return;
+    btn.textContent = shortAddr(G.walletAddress);
+    btn.style.borderColor = '#00e5ff';
+    btn.style.color = '#00e5ff';
+  }
 
   renderLeaderboard();
   paintWalletBtn();

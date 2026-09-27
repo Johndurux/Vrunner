@@ -14,24 +14,42 @@ import {
 } from './obstacles.js';
 
 export function spawnRow(zPos) {
+  // Onboarding curve: The first 45 meters should be a fun warm-up runway!
+  // In the first 35m (z > -36), spawn NO obstacles so the player
+  // has breathing room to get into the flow and collect initial $VPLAY coins.
+  const isInitialRunway = (G.distance < 10 && zPos > -36);
+  if (isInitialRunway) {
+    // Pure coin runway: spawn coins in center or adjacent lane
+    const coinLane = (Math.abs(zPos) < 24) ? 1 : Math.floor(Math.random() * 3);
+    for (let i = 0; i < 3; i++) {
+      const c = createCoin();
+      c.position.set(LANES[coinLane], 0, zPos + (i * 2.2) - 2.2);
+      scene.add(c);
+      activeItems.push(c);
+    }
+    return;
+  }
+
   const freeLanes = [0, 1, 2];
   const obsLane = freeLanes.splice(Math.floor(Math.random() * freeLanes.length), 1)[0];
 
-  // Spawn 1 of 3 obstacle types:
-  // 40% Tall Candle (Dodge) | 35% Low Barrier (Jump) | 25% Hanging SEC Sign (Slide)
-  const r = Math.random();
+  // Spawn obstacle:
+  // For early distance (< 50m), keep it gentle: low margin barrier (Jump) only, leaving 2 lanes wide open
   let obs;
-  if (r < 0.40) obs = createRedCandle();
-  else if (r < 0.75) obs = createMarginBarrier();
-  else obs = createSecSign();
+  if (G.distance < 50 && zPos > -60) {
+    obs = createMarginBarrier();
+  } else {
+    // Standard mix:
+    // 40% Tall Candle (Dodge) | 35% Low Barrier (Jump) | 25% Hanging SEC Sign (Slide)
+    const r = Math.random();
+    if (r < 0.40) obs = createRedCandle();
+    else if (r < 0.75) obs = createMarginBarrier();
+    else obs = createSecSign();
 
-  // Past 800m, a row may be sealed with a combo: a jump target and a slide
-  // target in the SAME row, so the player must handle both in one pass.
-  // When the combo wins, the single obstacle is NOT spawned at all (the
-  // collision loop has no `superseded` flag, so a flagged obstacle would
-  // still collide).
-  const useCombo = G.distance > 800 && Math.random() < 0.22;
-  if (useCombo) obs = createComboGate();
+    // Past 800m, a row may be sealed with a combo
+    const useCombo = G.distance > 800 && Math.random() < 0.22;
+    if (useCombo) obs = createComboGate();
+  }
 
   obs.position.set(LANES[obsLane], 0, zPos);
   scene.add(obs);

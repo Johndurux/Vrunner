@@ -383,3 +383,35 @@ export const CHARACTERS = [
     }
   }
 ];
+
+export function getCharacterSvg(c) {
+  const id = c.id;
+  if (id === 'armor') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="10" y="14" width="28" height="24" rx="2" fill="#c7a458"/><rect x="8" y="8" width="4" height="12" fill="#ece2c8"/><rect x="36" y="8" width="4" height="12" fill="#ece2c8"/><rect x="14" y="20" width="7" height="7" rx="1" fill="#ffd772"/><rect x="27" y="20" width="7" height="7" rx="1" fill="#ffd772"/><rect x="16" y="31" width="16" height="3" fill="#1c1a1b"/></svg>`;
+  }
+  if (id === 'mist') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="11" y="12" width="26" height="26" rx="4" fill="#62f2cc"/><rect x="15" y="20" width="6" height="8" rx="1" fill="#0d1b2a"/><rect x="27" y="20" width="6" height="8" rx="1" fill="#0d1b2a"/><rect x="20" y="31" width="8" height="3" fill="#0d1b2a"/></svg>`;
+  }
+  if (id === 'pip') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><polygon points="12,14 16,6 20,14" fill="#ff6289"/><polygon points="28,14 32,6 36,14" fill="#ff6289"/><rect x="12" y="14" width="24" height="22" rx="3" fill="#ff6289"/><rect x="16" y="21" width="5" height="5" fill="#ffffff"/><rect x="27" y="21" width="5" height="5" fill="#ffffff"/><rect x="17" y="22" width="3" height="3" fill="#1c1a1b"/><rect x="28" y="22" width="3" height="3" fill="#1c1a1b"/><polygon points="23,28 25,28 24,30" fill="#ffffff"/></svg>`;
+  }
+  if (id === 'honey') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><circle cx="13" cy="13" r="5" fill="#f5c842"/><circle cx="35" cy="13" r="5" fill="#f5c842"/><rect x="11" y="14" width="26" height="24" rx="3" fill="#f5c842"/><rect x="15" y="21" width="5" height="5" fill="#1c1a1b"/><rect x="28" y="21" width="5" height="5" fill="#1c1a1b"/><rect x="18" y="27" width="12" height="8" rx="2" fill="#fff5ea"/><rect x="22" y="29" width="4" height="3" rx="1" fill="#1c1a1b"/></svg>`;
+  }
+  if (id === 'goggles') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="11" y="13" width="26" height="24" rx="2" fill="#00e5ff"/><rect x="8" y="19" width="32" height="10" rx="2" fill="#111"/><rect x="11" y="21" width="11" height="6" fill="#ffe600"/><rect x="26" y="21" width="11" height="6" fill="#ffe600"/><rect x="20" y="32" width="8" height="2" fill="#007799"/></svg>`;
+  }
+  if (id === 'captain') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="10" y="8" width="28" height="8" rx="2" fill="#112244"/><rect x="21" y="10" width="6" height="5" fill="#ffd700"/><rect x="11" y="16" width="26" height="22" rx="2" fill="#3d72ff"/><rect x="15" y="23" width="5" height="5" fill="#ffffff"/><rect x="28" y="23" width="5" height="5" fill="#ffffff"/><rect x="17" y="24" width="3" height="3" fill="#111"/><rect x="30" y="24" width="3" height="3" fill="#111"/><rect x="18" y="31" width="12" height="2" fill="#ffd700"/></svg>`;
+  }
+  if (id === 'lavender') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="11" y="13" width="26" height="24" rx="3" fill="#a87ffb"/><rect x="14" y="21" width="7" height="6" rx="1" fill="#00ffcc"/><rect x="27" y="21" width="7" height="6" rx="1" fill="#00ffcc"/><rect x="8" y="20" width="3" height="8" fill="#e0c3fc"/><rect x="37" y="20" width="3" height="8" fill="#e0c3fc"/><rect x="19" y="31" width="10" height="3" fill="#5a189a"/></svg>`;
+  }
+  if (id === 'tux') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="11" y="12" width="26" height="26" rx="4" fill="#2a2a2a"/><rect x="16" y="18" width="16" height="18" rx="2" fill="#ffffff"/><circle cx="19" cy="22" r="2" fill="#111"/><circle cx="29" cy="22" r="2" fill="#111"/><polygon points="21,26 27,26 24,30" fill="#ff8800"/><polygon points="20,33 24,31 28,33 24,35" fill="#ff3b4e"/></svg>`;
+  }
+  if (id === 'mrhat') {
+    return `<svg viewBox="0 0 48 48" width="36" height="36"><rect x="14" y="6" width="20" height="12" fill="#1c1a1b"/><rect x="14" y="16" width="20" height="3" fill="#ff3b4e"/><rect x="9" y="18" width="30" height="3" rx="1" fill="#1c1a1b"/><rect x="12" y="21" width="24" height="18" rx="2" fill="#e0643a"/><rect x="15" y="26" width="5" height="5" fill="#1c1a1b"/><rect x="28" y="26" width="5" height="5" fill="#1c1a1b"/><path d="M19,33 Q24,37 29,33" stroke="#1c1a1b" stroke-width="2" fill="none"/></svg>`;
+  }
+  return c.avatarChar || c.name.charAt(0);
+}

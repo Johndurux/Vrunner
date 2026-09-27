@@ -24,16 +24,8 @@ const playerBox = new THREE.Box3();
  * Opacity has to be set on a material, and the material cache in voxel.js
  * hands the SAME instance to every red candle -- so fading there would make
  * all of them blink together. Each obstacle therefore gets a private clone of
- * its materials the first time it is asked to fade.
- *
- * The flag on the clone matters as much as the clone itself. voxel.js marks
- * everything it hands out with userData.shared, and disposeObject() skips
- * anything carrying that flag so it does not free buffers the cache still
- * owns. THREE.Material.copy() copies userData across, so a clone of a cached
- * material arrives still flagged shared -- and then the disposer skips the one
- * material that genuinely belongs to this obstacle, leaking it on every
- * recycle. Clearing the flag here is what makes the private material
- * disposable.
+ * its materials the first time it is asked to fade. The clone is not flagged
+ * shared, so disposeObject() frees it when the obstacle is recycled.
  * @param {THREE.Object3D} obj
  * @returns {void}
  */
@@ -216,15 +208,29 @@ export function updateCollisions(dt, moveZ, mesh) {
                                       ziPrev + halfZ);
     }
 
+    // Soft magnetic pull: If player is near the coin's lane and approaching
+    if (!item.userData.collected && item.userData.type === 'coin') {
+      const dx = playerX - item.position.x;
+      const dz = -item.position.z;
+      if (Math.abs(dx) < 1.35 && dz > -0.5 && dz < 6.5) {
+        item.position.x += dx * 8.5 * dt;
+        item.position.y += ((mesh.position.y + 0.6) - item.position.y) * 8.5 * dt;
+      }
+    }
+
     if (!item.userData.collected && playerBox.intersectsBox(item.userData.box)) {
       item.userData.collected = true;
       const isCoin = item.userData.type === 'coin';
       if (isCoin) {
         // The multiplier doubles coin value; updateCoinHud() keeps the
         // HUD in sync with the counter.
-        G.sessionCoins += coinValue();
+        const val = coinValue();
+        G.sessionCoins += val;
         updateCoinHud();
         audio.coin();
+        if (typeof window !== 'undefined' && window.__spawnCoinFloat) {
+          window.__spawnCoinFloat(val);
+        }
       } else {
         activatePowerup(item.userData.type);
       }

@@ -62,7 +62,6 @@ export function startRunGame() {
   G.targetX = 0;
   G.runSpeed = 20;
   G.distance = 0;
-  G.shownM = -1;
   G.sessionCoins = 0;
   // The run always opens in the first district, so the scenery and the sky
   // match the fresh distance. redressScenery() is not needed here: a new run
@@ -109,6 +108,7 @@ export function startRunGame() {
       // the track on its way to position.
       if (chaser.mesh) chaser.mesh.visible = true;
       document.getElementById('gameHUD').classList.add('active');
+      audio.startBgm();
     }
   }, 500);
 }
@@ -116,6 +116,7 @@ export function startRunGame() {
 export function returnToLobby() {
   buildTrackPool();
   audio.click();
+  audio.stopBgm();
   G.gameState = 'LOBBY';
   if (G.runStartTimer) {
     clearTimeout(G.runStartTimer);
@@ -149,6 +150,7 @@ export function triggerGameOver() {
   if (G.gameState !== 'RUNNING' && G.gameState !== 'TRANSITION') return;
   G.gameState = 'GAMEOVER';
   audio.crash();
+  audio.stopBgm();
   resetPlayerMotion();
   // Stop the power-up timers and pull the hoverboard glow down, so the
   // death screen is not left with a running countdown and a glowing shield.
