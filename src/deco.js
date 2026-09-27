@@ -260,12 +260,135 @@ function buildHarbourDocks() {
   return g;
 }
 
+// ── ZONA SKY GARDEN: rooftop terraces, trellises, hanging lights ────────────
+// Fifth district. The four before it are all underground or walled in --
+// street canyon, underpass, data centre, dock yard -- so this one opens the
+// sky out and puts the horizon back in frame. That is the point of it: the
+// run needs somewhere the player can see a long way for a change of pace.
+//
+// Everything is voxels on the same two helpers the other builders use, so the
+// geometry cache sees the same small key space the skyline builder does.
+//
+// Layout: raised planters and pergolas either side of the rails, a trellis
+// overhead at the same height as the other districts' arches, and a low
+// parapet so the terraces read as being *on top of* something. Nothing here
+// goes into activeObstacles or activeItems -- it cannot hit the player.
+
+/**
+ * Rooftop terraces above the city.
+ * @returns {THREE.Group}
+ */
+function buildRooftopGarden() {
+  const g = new THREE.Group();
+
+  for (const side of [-1, 1]) {
+    // Raised planters. randDim() keeps the sizes on the 1.0 grid so the
+    // geometry cache stays bounded -- raw random sizes are what grew it
+    // without limit before. The step is invisible on a planter.
+    for (let z = -CHUNK_LEN / 2 + 3; z < CHUNK_LEN / 2 - 3; z += 4.5) {
+      const w = randDim(2.2, 1.2);
+      const h = randDim(1.0, 0.5);
+      const d = randDim(3.2, 1.0);
+      const planter = decoBox(w, h, d, 0x2f3a2c, {
+        x: side * (SIDE + jitter(0.5)),
+        y: h / 2 + 0.2,
+        z: z + jitter(0.6),
+      });
+      g.add(planter);
+
+      // Shrub mass on top: two or three overlapping boxes rather than one
+      // sphere, because nothing in this file is allowed to mint a non-box
+      // geometry. The jitter is per-shrub so a planter does not read as a
+      // single solid block of green.
+      const shrubs = 2 + (Math.random() < 0.4 ? 1 : 0);
+      for (let s = 0; s < shrubs; s++) {
+        const sw = randDim(0.7, 0.5);
+        const sh = randDim(0.5, 0.4);
+        const sd = randDim(0.7, 0.5);
+        g.add(decoBox(sw, sh, sd, 0x3f6b3a, {
+          x: side * (SIDE + jitter(0.4)),
+          y: h + sh / 2 + 0.28,
+          z: z + jitter(0.9) + (s - 1) * 0.5,
+        }));
+      }
+    }
+
+    // Pergola: four posts carrying a slatted roof. The roof slats sit at
+    // Y=6.2, clear of the player's slide (which drops to about Y=0.5), so
+    // the frame is walked under rather than through.
+    for (let z = -CHUNK_LEN / 2 + 7; z < CHUNK_LEN / 2 - 7; z += 16) {
+      const px = side * (SIDE + 2.2);
+      const post = decoBox(0.45, 6.2, 0.45, 0x4a4034, { x: px, y: 3.1, z });
+      g.add(post);
+      g.add(decoBox(0.45, 6.2, 0.45, 0x4a4034, { x: px, y: 3.1, z: z + 6 }));
+
+      // Slats across the roof, with gaps so the sky shows through.
+      for (let s = -2; s <= 2; s++) {
+        g.add(decoBox(3.2, 0.22, 0.55, 0x5a4d3c, {
+          x: side * (SIDE + 1.1), y: 6.2, z: z + 3 + s * 1.15,
+        }));
+      }
+    }
+
+    // String lights strung along the terrace edge. Each bulb is flagged as a
+    // blinker so animateScenery() picks it up and pulses it out of phase with
+    // the others -- that is the existing mechanism, no new animation code.
+    for (let z = -CHUNK_LEN / 2 + 4; z < CHUNK_LEN / 2 - 4; z += 3.2) {
+      const drop = 0.5 + Math.random() * 0.4;
+      const bulb = neonBox(0.3, 0.3, 0.3, 0xffd8a0, {
+        x: side * (SIDE - 0.5), y: 5.2 - drop, z: z + jitter(0.4),
+      });
+      bulb.userData.blinker = true;
+      bulb.userData.phase = Math.random() * Math.PI * 2;
+      g.add(bulb);
+
+      // The wire itself: a short dark segment above each bulb so the light
+      // has something to hang from instead of floating in mid air.
+      g.add(decoBox(0.06, 0.5, 0.06, 0x1a1a1a, {
+        x: side * (SIDE - 0.5), y: 5.2 - drop / 2, z: z + jitter(0.4),
+      }));
+    }
+
+    // Parapet wall along the outer edge. Low enough to see over -- the whole
+    // reason this district exists is the view, so a tall wall would defeat it.
+    for (let z = -CHUNK_LEN / 2 + 2; z < CHUNK_LEN / 2 - 2; z += 3.0) {
+      const ph = randDim(0.9, 0.4);
+      g.add(decoBox(0.5, ph, 2.9, 0x3b3a35, {
+        x: side * (SIDE + 4.6), y: ph / 2 + 0.2, z: z + jitter(0.4),
+      }));
+    }
+  }
+
+  // Overhead beam the string lights and pergolas hang from, spanning the
+  // tracks at the same height as the arches in the other districts. It has
+  // to be as wide as the gap it spans: the posts are at +/- (SIDE + 2.2), so
+  // a narrower beam would stop in mid air short of both of them.
+  for (let z = -CHUNK_LEN / 2 + 10; z < CHUNK_LEN / 2 - 10; z += 14) {
+    g.add(decoBox(2 * (SIDE + 2.2), 0.34, 0.34, 0x4a4034, { x: 0, y: 6.5, z }));
+  }
+
+  // Distant skyline behind the parapet, so the horizon is not empty sky. Flat
+  // dark boxes with no detail: at that distance and behind this much fog they
+  // are silhouette only, and detailing them would cost draws for nothing.
+  for (let z = -CHUNK_LEN / 2; z < CHUNK_LEN / 2; z += 7) {
+    for (const side of [-1, 1]) {
+      const h = randDim(10, 8);
+      g.add(decoBox(3.2, h, 3.2, 0x1c2430, {
+        x: side * (SIDE + 9.5), y: h / 2 - 1.0, z: z + jitter(1.2),
+      }));
+    }
+  }
+
+  return g;
+}
+
 /** Builder per district index. Order must match DISTRICTS in zones.js. */
 export const DECO_BUILDERS = [
   buildCitySkyline,
   buildNeonTunnel,
   buildDataCenter,
   buildHarbourDocks,
+  buildRooftopGarden,
 ];
 
 /**

@@ -57,6 +57,21 @@ export const DISTRICTS = [
     laneLight: 0xffe0a0, // sodium floodlights
     groundTint: 0x101820,
   },
+  {
+    // The fifth district puts the player above the skyline. The four before it
+    // are all walled in -- street canyon, underpass, data centre, dock yard --
+    // so this is the one place the horizon stays in frame, which gives the run
+    // somewhere to breathe. Fog is a light haze rather than a dark tint, and
+    // pulled back further than the docks, so the distant skyline silhouettes
+    // behind the parapet actually read instead of dissolving into it.
+    name: 'ROOFTOP GARDEN',
+    sky: 0x2b3a4a,
+    fog: 0x33465a,
+    fogNear: 38,
+    fogFar: 178,
+    laneLight: 0xffe8c0, // warm string lights over cool concrete
+    groundTint: 0x1c2229,
+  },
 ];
 
 /** Distance in metres between district changes. */
