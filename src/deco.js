@@ -146,8 +146,109 @@ function buildDataCenter() {
   return g;
 }
 
+// ── ZONE HARBOUR DOCKS: cargo cranes, floodlight masts, wet concrete ───────
+/**
+ * A fourth district for the run to reach after the data center.
+ *
+ * Distinct from the other three on purpose:
+ *  - NEON METROPOLIS is open air, tall boxes, warm windows.
+ *  - CYBER UNDERPASS is enclosed, flat walls, horizontal neon runs.
+ *  - CRYPTO DATA CENTER is enclosed, vertical LED strips, tight grid.
+ *  - HARBOUR DOCKS is open air again but low and wide: containers stacked
+ *    into walls, gantry cranes spanning the whole track, floodlight masts.
+ *    The eye line is horizontal again after two enclosed zones, so the run
+ *    keeps alternating between open and enclosed.
+ *
+ * Everything reuses the shared geometry and material caches in voxel.js, and
+ * casts no shadow, so the per-chunk cost matches the districts already there.
+ */
+function buildHarbourDocks() {
+  const g = new THREE.Group();
+
+  for (const side of [-1, 1]) {
+    // Container walls. Two high rows and one low row, so the skyline is a
+    // stepped edge rather than a single flat plane of boxes.
+    for (let z = -CHUNK_LEN / 2 + 2; z < CHUNK_LEN / 2 - 2; z += 5.5) {
+      const rows = [
+        { h: 3.4, off: 0.0, w: 2.6 },
+        { h: 3.4, off: 2.7, w: 2.6 },
+        { h: 2.2, off: 5.4, w: 2.4 },
+      ];
+      for (const row of rows) {
+        // Skip a stack now and then so the wall has gaps to see the sky through.
+        if (Math.random() < 0.18) continue;
+        const tint = [0x2a3b46, 0x3b2f28, 0x24333f, 0x40332a][Math.floor(Math.random() * 4)];
+        g.add(decoBox(row.w, row.h, 4.4, tint, {
+          x: side * (SIDE + row.off + jitter(0.5)),
+          y: row.h / 2 - 0.3 + jitter(0.15),
+          z: z + jitter(0.7),
+        }));
+      }
+    }
+
+    // Corrugated seams on the container faces, so they read as metal and not
+    // as plain coloured cubes. Placed on the track-facing side of the NEAREST
+    // row (SIDE - halfWidth), not at a fixed offset: the rows are 2.6 wide, so
+    // anything past SIDE - 1.3 ends up buried inside the second stack.
+    for (let z = -CHUNK_LEN / 2 + 4; z < CHUNK_LEN / 2 - 4; z += 5.5) {
+      for (let r = 0; r < 3; r++) {
+        g.add(neonBox(0.05, 0.06, 4.3, 0x1b2a33, {
+          x: side * (SIDE - 1.32), y: 0.35 + r * 1.05, z: z + jitter(0.5),
+        }));
+      }
+    }
+
+    // Gantry crane legs on the outer edge, with a boom reaching over the track.
+    for (let z = -CHUNK_LEN / 2 + 8; z < CHUNK_LEN / 2 - 8; z += 18) {
+      const legX = side * (SIDE + 6.4);
+      g.add(decoBox(0.7, 15.5, 0.7, 0x5a4a3a, { x: legX, y: 7.5, z }));
+      g.add(decoBox(0.7, 15.5, 0.7, 0x5a4a3a, { x: legX, y: 7.5, z: z + 5 }));
+      // Truss beam across the track at the top of the legs. It has to span
+      // leg to leg, so its width is 2 * legX and not something picked to look
+      // right -- a narrower beam stops in mid air short of both legs.
+      g.add(decoBox(2 * (SIDE + 6.4), 0.6, 0.6, 0x6b5847, { x: 0, y: 15.2, z: z + 2.5 }));
+      // Diagonal stay, angled in towards the track. The mesh has to be built
+      // first and rotated after: g.add() returns the group it was called on,
+      // so chaining .rotation onto it would tilt the entire scenery group
+      // instead of this one strut.
+      const stay = decoBox(0.45, 7.4, 0.45, 0x5a4a3a, {
+        x: legX - side * 2.6, y: 11.2, z: z + 2.5,
+      });
+      stay.rotation.z = side * 0.34;
+      g.add(stay);
+    }
+
+    // Floodlight masts: a pole with a lamp head that blinks like the ones in
+    // the other districts, so the animateScenery walk still finds them.
+    for (let z = -CHUNK_LEN / 2 + 6; z < CHUNK_LEN / 2 - 6; z += 12) {
+      const x = side * (SIDE + 4.2);
+      g.add(decoBox(0.4, 11.0, 0.4, 0x3a4048, { x, y: 5.5, z }));
+      const head = neonBox(1.5, 0.34, 0.5, 0xffe0a0, { x: x - side * 0.7, y: 10.9, z });
+      head.userData.blinker = true;
+      head.userData.phase = Math.random() * Math.PI * 2;
+      g.add(head);
+    }
+  }
+
+  // Wet concrete apron: a low slab of standing water either side of the rails,
+  // tinted to catch the floodlights. Kept flat and unlit so it reads as a
+  // reflective surface without paying for a second material.
+  for (const side of [-1, 1]) {
+    g.add(neonBox(4.2, 0.04, CHUNK_LEN, 0x16242c, {
+      x: side * 4.4, y: 0.26, z: 0,
+    }));
+  }
+
+  return g;
+}
+
 /** Builder per district index. Order must match DISTRICTS in zones.js. */
-export const DECO_BUILDERS = [buildCitySkyline, buildNeonTunnel, buildDataCenter];
+export const DECO_BUILDERS = [
+  buildCitySkyline,
+  buildNeonTunnel,
+  buildDataCenter,
+  buildHarbourDocks,
+];
 
 /**
  * Dress a freshly built chunk for the district the run is in.

@@ -7,11 +7,19 @@ import { spawnRow } from './spawn.js';
 import { dressChunk } from './deco.js';
 import { districtChange } from './zones.js';
 import { G } from './state.js';
+import { disposeObject } from './utils.js';
 
 /**
- * Throw away a chunk's scenery subtree. Geometry and materials were created
- * per chunk, so leaving them for the collector would keep re-uploading the
- * same boxes on every district crossing.
+ * Throw away a chunk's scenery subtree. Leaving it for the collector would
+ * keep re-uploading the same boxes on every district crossing.
+ *
+ * The teardown goes through disposeObject() rather than disposing directly,
+ * because none of this scenery is per-chunk: every box comes from the shared
+ * geometry and material caches in voxel.js, which flag what they hand out.
+ * Disposing here unconditionally freed those cached buffers, and the other
+ * chunks still drawing the same boxes lost them -- so scenery went dark as
+ * blank or broken geometry at every district crossing (every 250m). The
+ * helper skips cache-owned resources and only frees genuinely private ones.
  * @param {THREE.Group} chunk
  * @returns {void}
  */
@@ -19,13 +27,7 @@ function stripScenery(chunk) {
   for (let i = chunk.children.length - 1; i >= 0; i--) {
     const child = chunk.children[i];
     if (!child.userData || !child.userData.isScenery) continue;
-    child.traverse(node => {
-      if (node.geometry) node.geometry.dispose();
-      if (node.material) {
-        const mats = Array.isArray(node.material) ? node.material : [node.material];
-        mats.forEach(m => m.dispose());
-      }
-    });
+    disposeObject(child);
     chunk.remove(child);
   }
 }

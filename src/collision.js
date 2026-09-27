@@ -24,8 +24,16 @@ const playerBox = new THREE.Box3();
  * Opacity has to be set on a material, and the material cache in voxel.js
  * hands the SAME instance to every red candle -- so fading there would make
  * all of them blink together. Each obstacle therefore gets a private clone of
- * its materials the first time it is asked to fade. The clone is not flagged
- * shared, so disposeObject() frees it when the obstacle is recycled.
+ * its materials the first time it is asked to fade.
+ *
+ * The flag on the clone matters as much as the clone itself. voxel.js marks
+ * everything it hands out with userData.shared, and disposeObject() skips
+ * anything carrying that flag so it does not free buffers the cache still
+ * owns. THREE.Material.copy() copies userData across, so a clone of a cached
+ * material arrives still flagged shared -- and then the disposer skips the one
+ * material that genuinely belongs to this obstacle, leaking it on every
+ * recycle. Clearing the flag here is what makes the private material
+ * disposable.
  * @param {THREE.Object3D} obj
  * @returns {void}
  */
@@ -36,6 +44,7 @@ function makeFadeable(obj) {
     const own = src.map(m => {
       const c = m.clone();
       c.transparent = true;
+      delete c.userData.shared;
       return c;
     });
     child.material = Array.isArray(child.material) ? own : own[0];

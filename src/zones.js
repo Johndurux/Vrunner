@@ -45,6 +45,18 @@ export const DISTRICTS = [
     laneLight: 0x4dff9e, // server rack glow
     groundTint: 0x0e1418,
   },
+  {
+    // The fourth district opens the sky back up after two enclosed zones.
+    // Haze rather than darkness, so the container stacks and crane silhouettes
+    // read against something lighter than the data center's black.
+    name: 'HARBOUR DOCKS',
+    sky: 0x14202b,
+    fog: 0x182633,
+    fogNear: 26,
+    fogFar: 118,
+    laneLight: 0xffe0a0, // sodium floodlights
+    groundTint: 0x101820,
+  },
 ];
 
 /** Distance in metres between district changes. */

@@ -73,6 +73,7 @@ const state = {
   idx: 0,          // which mode the cycle is heading toward
   lastModeIndex: 0,
   changed: false,
+  scanTick: 0,      // frame counter for the throttled emissive re-scan
 };
 
 /**
@@ -114,28 +115,48 @@ function targetMode() {
 }
 
 /**
- * Collect every material in the scene whose emissive colour should respond to
- * the time of day. Cached per mesh: walking the whole graph each frame would
- * cost more than the rest of the lighting put together.
- * @param {THREE.Object3D} root
- * @param {Array<{m:THREE.Material, base:number}>} into  accumulator
- * @returns {void}
+ * Every material whose emissive colour should respond to the time of day,
+ * kept as a Set so a material that is already registered is not stored twice.
+ *
+ * This is a growing registry, not a one-shot snapshot. Obstacles and power-ups
+ * mint their own MeshStandardMaterial every time they spawn, so anything
+ * collected at the first frame is stale the moment the next obstacle appears:
+ * those materials would keep their full night brightness in daylight while the
+ * scenery dimmed correctly.
  */
-function collectEmissive(root, into) {
+const neonMats = new Map();
+
+/** Frames between emissive re-scans. See collectEmissive for why it is not 1. */
+const SCAN_EVERY = 20;
+
+/**
+ * Register every emissive material currently in the graph that is not already
+ * known, and record its untouched intensity as the baseline to scale from.
+ *
+ * Walking the whole graph is not free and applyMode runs every frame, so the
+ * caller only does this every SCAN_EVERY frames. A material that appears
+ * between two walks joins the next one, a fraction of a second late, which is
+ * far below what anyone could see.
+ * @param {THREE.Object3D} root
+ * @returns {number} how many new materials were registered
+ */
+function collectEmissive(root) {
+  let found = 0;
   root.traverse((o) => {
     if (!o.isMesh || !o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of mats) {
-      if (m.emissive && m.userData.__neonBase === undefined) {
-        m.userData.__neonBase = m.emissiveIntensity ?? 1;
-        into.push({ m, base: m.userData.__neonBase });
-      }
+      // A black emissive is invisible whatever the intensity, so tracking it
+      // would only grow the registry for no visual effect.
+      if (!m || !m.emissive) continue;
+      if (m.emissive.r === 0 && m.emissive.g === 0 && m.emissive.b === 0) continue;
+      if (neonMats.has(m)) continue;
+      neonMats.set(m, m.emissiveIntensity ?? 1);
+      found++;
     }
   });
+  return found;
 }
-
-/** Emissive materials found so far, so the walk happens once per mesh. */
-const neonMats = [];
 
 /**
  * Start the cycle over. Called at the start of a run so a new run always
@@ -149,6 +170,14 @@ export function resetDayNight() {
   state.mix = 1;
   state.lastModeIndex = 0;
   state.changed = false;
+  // The registry holds strong references to materials. A run clears the scene,
+  // so those materials are gone and holding them would leak one per spawn for
+  // the life of the page. Dropping the map lets the next frame re-collect
+  // whatever the new run actually built.
+  neonMats.clear();
+  // Zeroing the counter makes the next frame an immediate scan, so a new run
+  // does not open with a few frames of unlit scenery.
+  state.scanTick = 0;
 }
 
 /**
@@ -242,9 +271,15 @@ function applyMode(m) {
   // Emissive surfaces carry the night's neon. Scaling them down is what keeps
   // the daylight pass looking lit rather than washed out, while the brand
   // colours still read as accents.
-  if (neonMats.length === 0) collectEmissive(scene, neonMats);
+  //
+  // Obstacles and power-ups mint their own material on every spawn, so the
+  // registry has to keep picking up newcomers rather than being taken once and
+  // left stale for the rest of the page. The walk is throttled: a graph this
+  // size is a few hundred nodes, and doing it every frame would cost more than
+  // the rest of the lighting put together.
+  if (state.scanTick++ % SCAN_EVERY === 0) collectEmissive(scene);
   const k = m.neon;
-  for (const { m: mat, base } of neonMats) {
+  for (const [mat, base] of neonMats) {
     mat.emissiveIntensity = base * k;
   }
 }
