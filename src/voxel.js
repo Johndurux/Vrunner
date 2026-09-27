@@ -16,6 +16,17 @@ import * as THREE from 'three';
 const GEO_CACHE = new Map();
 
 /**
+ * The grid every cached dimension is snapped to, so sizes that differ only by
+ * floating-point noise share one geometry.
+ *
+ * Snapping the key alone is NOT sufficient to bound this cache: a key is the
+ * whole (w, h, d) tuple, and scenery that draws each axis independently can
+ * still walk a huge product space even on a fine grid. The real bound comes
+ * from the caller picking a small set of sizes -- see randDim() in deco.js.
+ */
+const DIM_STEP = 0.25;
+
+/**
  * Material cache, same argument: 700 separate MeshLambertMaterial instances of
  * the same colour is 700 shader programs to bind. Keyed by colour and
  * lit/unlit, because a glowing prop must not cast shade.
@@ -23,11 +34,24 @@ const GEO_CACHE = new Map();
  */
 const MAT_CACHE = new Map();
 
+// Dimensions are snapped to this grid before they are used as a cache key.
+// Scenery asks for randomised sizes, and keying on the raw float meant every
+// draw produced a tuple that could never recur, so the cache grew without
+// bound (13 entries at boot, 175 after dressing the first set of chunks) and
+// every entry pinned a buffer nothing would ever reuse. A random height drawn
+// from a 16-wide range is a 16.0/0.25 = 64-step value even after snapping, and
+// the city builder draws three of those per building, so snapping the key
+// alone only rehashes the same unbounded space. The draws themselves are
+// quantised (see deco.js) so the number of distinct sizes is finite.
+
 function boxGeo(w, h, d) {
-  const key = w + '_' + h + '_' + d;
+  const qw = Math.round(w / DIM_STEP) * DIM_STEP;
+  const qh = Math.round(h / DIM_STEP) * DIM_STEP;
+  const qd = Math.round(d / DIM_STEP) * DIM_STEP;
+  const key = qw + '_' + qh + '_' + qd;
   let g = GEO_CACHE.get(key);
   if (!g) {
-    g = new THREE.BoxGeometry(w, h, d);
+    g = new THREE.BoxGeometry(qw, qh, qd);
     // Marked so disposeObject() knows this buffer belongs to the cache and to
     // every other mesh sharing these dimensions, and must not be freed with
     // any single one of them.

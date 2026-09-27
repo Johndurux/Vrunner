@@ -72,13 +72,14 @@ export const getShieldGlow = () => puState.shieldGlow;
 /**
  * Sisa tabrakan yang bisa diserap power-up per-tabrakan.
  *
- * Di-rename dari getHoverboardHits -> getShieldHits, tapi nama lama
- * dipertahankan sebagai alias karena collision.js masih memakainya.
+ * Di-rename dari getHoverboardHits -> getShieldHits. Alias lamanya masih
+ * dipertahankan karena sudah jadi bagian dari permukaan modul, tapi bukan
+ * karena collision.js memakainya: file itu membaca puState secara langsung.
  * @returns {number}
  */
 export const getShieldHits = () => puState.shieldHitsLeft;
 
-/** @deprecated alias ke getShieldHits, dipakai collision.js. @returns {number} */
+/** @deprecated alias ke getShieldHits, dipertahankan untuk kompatibilitas. @returns {number} */
 export const getHoverboardHits = () => puState.shieldHitsLeft;
 
 /** @returns {number} charge REKT DODGE yang tersisa */
@@ -173,8 +174,11 @@ export function createBoost() {
 /**
  * REKT DODGE -- ikon panah ke atas/bawah, hilang dari pickup lane
  * (dipanggil via double-tap, bukan lewat jalan), jadi tidak dipakai
- * sebagai item lahur. Fungsi ini tetap ada supaya type-nya dikenal
- * kalau mau spawn manual.
+ * sebagai item lahur. Tidak ada yang memanggilnya saat ini: aksi
+ * double-tap (dodgeAction) cuma menggerakkan lane, tidak membangun ikon
+ * ini, dan POWERUP_FACTORY tidak memuatnya karena type-nya bentrok
+ * dengan createBoost. Fungsi ini disimpan sebagai bahan kalau nanti
+ * ikon dodge benar-benar mau dimunculkan.
  * @returns {THREE.Group}
  */
 export function createDodge() {

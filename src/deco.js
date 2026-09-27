@@ -29,6 +29,24 @@ function jitter(spread) {
 }
 
 /**
+ * A random dimension, snapped to a coarse grid.
+ *
+ * Raw random sizes are why the geometry cache grew without bound: every draw
+ * minted a tuple no later draw could repeat, so each one pinned a buffer that
+ * stayed resident for the whole session.
+ *
+ * The step here is deliberately COARSER than the cache's own DIM_STEP. Snapping
+ * to DIM_STEP is not enough: three independent draws per building multiply
+ * back out, so a 16-unit range on a 0.25 grid still admits 65x9x7 = ~4k body
+ * tuples, and a long run walks most of them. A 1.0 step over the same ranges
+ * gives 17x4x3 = 204 -- small enough to exhaust after the first district, and
+ * whole-metre variation is invisible on a building.
+ */
+function randDim(base, spread) {
+  return Math.round(base + Math.random() * spread);
+}
+
+/**
  * Most billboards allowed in one chunk. The prompt asked for 4-6 across the
  * whole view; with three chunks dressed at a time this lands in that range
  * while keeping the per-chunk prop count bounded.
@@ -41,14 +59,14 @@ function buildCitySkyline() {
 
   for (const side of [-1, 1]) {
     for (let z = -CHUNK_LEN / 2 + 2; z < CHUNK_LEN / 2 - 2; z += 9.5) {
-      const h = 9 + Math.random() * 16;
-      const w = 3.4 + Math.random() * 2.2;
-      const depth = 4.2 + Math.random() * 1.6;
+      const h = randDim(9, 16);
+      const w = randDim(3.4, 2.2);
+      const depth = randDim(4.2, 1.6);
       const x = side * (SIDE + jitter(1.2));
 
       const body = decoBox(w, h, depth, 0x141a24, { x, y: h / 2 - 0.3, z: z + jitter(0.8) });
       // Setbacks so the skyline is not a row of flat slabs.
-      const crown = decoBox(w * 0.62, 1.6 + Math.random() * 2, depth * 0.7, 0x1b2431,
+      const crown = decoBox(w * 0.62, randDim(1.6, 2), depth * 0.7, 0x1b2431,
         { x, y: h + 0.6, z: z + jitter(0.8) });
       g.add(body, crown);
 
@@ -111,7 +129,7 @@ function buildDataCenter() {
   for (const side of [-1, 1]) {
     for (let z = -CHUNK_LEN / 2 + 2; z < CHUNK_LEN / 2 - 2; z += 7.0) {
       const x = side * (SIDE + jitter(0.6));
-      const h = 3.2 + Math.random() * 1.4;
+      const h = randDim(3.2, 1.4);
       g.add(decoBox(2.6, h, 3.2, 0x121a1c, { x, y: h / 2 - 0.3, z }));
 
       // Blinking status LEDs down the front face.

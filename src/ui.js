@@ -186,9 +186,20 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
     window.open('https://x.com/vibevibefun', '_blank', 'noopener,noreferrer');
   });
 
-  document.getElementById('toggleSoundBtn').addEventListener('click', function() {
+  const soundBtn = document.getElementById('toggleSoundBtn');
+  // Apply the stored preference before wiring the handler, so a reload does
+  // not show a stale ON label over a muted engine.
+  if (G.soundOn !== undefined) {
+    audio.enabled = G.soundOn;
+    soundBtn.textContent = audio.enabled ? 'ON' : 'OFF';
+  }
+  soundBtn.addEventListener('click', function() {
     audio.enabled = !audio.enabled;
+    G.soundOn = audio.enabled;
     this.textContent = audio.enabled ? 'ON' : 'OFF';
+    // Persisted so a muted player stays muted across a reload, which is what
+    // save.js claims it does.
+    writeSave({ sound: audio.enabled });
     if (audio.enabled) {
       audio.init();
       audio.click();
@@ -198,22 +209,6 @@ export function bindUi({ startRunGame, returnToLobby, setCharacter }) {
   document.getElementById('navLeaderboard').addEventListener('click', () => openModal(modals.leaderboard));
   document.getElementById('navSettings').addEventListener('click', () => openModal(modals.settings));
   document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeModals));
-
-  function shortAddr(addr) {
-    if (!addr || addr === 'you') return 'you';
-    if (addr.startsWith('DEMO-')) return addr; // placeholder label, keep whole
-    if (addr.includes('...')) return addr;
-    if (addr.length < 12) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  }
-
-  function paintWalletBtn() {
-    const btn = document.getElementById('connectWalletBtn');
-    if (!G.walletAddress) return;
-    btn.textContent = shortAddr(G.walletAddress);
-    btn.style.borderColor = '#00e5ff';
-    btn.style.color = '#00e5ff';
-  }
 
   renderLeaderboard();
   paintWalletBtn();

@@ -32,5 +32,10 @@ export function restoreState() {
   // default character and the roster pick looks like it never took.
   // A save written by an older build has no key here, hence the || 0.
   G.selectedCharIdx = Number(s.selectedCharIdx || 0);
+  // Sound is opt-in on first play but sticky afterwards: a save with no `sound`
+  // key (older build) must not silently unmute someone who had muted, so the
+  // default only applies when the key has never been written. bindUi() pushes
+  // this onto the audio engine and the toggle label.
+  if (s.sound !== undefined) G.soundOn = s.sound !== false;
   return s;
 }

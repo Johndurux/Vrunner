@@ -20,11 +20,17 @@ export const G = {
   runStartTimer: null,
   runSpeed: 18,
   distance: 0,
+  // Last whole-metre value written to the distance HUD. -1 rather than 0 so
+  // the first frame of a run always writes, and it is reset with distance.
+  shownM: -1,
   sessionCoins: 0,
   walletAddress: '',
   totalSavedCoins: 0,
   bestDist: 0,
   selectedCharIdx: 0,
+  // Sound preference, restored from the save so a mute survives a reload.
+  // Left undefined until restoreState() finds a stored preference.
+  soundOn: undefined,
   // Metres per day/night half-cycle; daynight.js reads this instead of its own
   // constant so the cycle can be tuned from the one state object.
   dayNightSpan: 350,

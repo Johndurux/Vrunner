@@ -62,6 +62,7 @@ export function startRunGame() {
   G.targetX = 0;
   G.runSpeed = 20;
   G.distance = 0;
+  G.shownM = -1;
   G.sessionCoins = 0;
   // The run always opens in the first district, so the scenery and the sky
   // match the fresh distance. redressScenery() is not needed here: a new run

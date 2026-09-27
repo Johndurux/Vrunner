@@ -68,7 +68,15 @@ function stepRun(dt, t, mesh) {
   // only place that has to know the distance moved.
   tickDodgeCharge(G.distance);
 
-  document.getElementById('hudDistance').innerHTML = `${Math.floor(G.distance)}<span>m</span>`;
+  // Rewritten only when the whole-metre value actually changes. Writing
+  // innerHTML every frame re-parses the markup 60 times a second for a
+  // number that only ticks once a metre.
+  const shownM = Math.floor(G.distance);
+  if (shownM !== G.shownM) {
+    G.shownM = shownM;
+    const el = document.getElementById('hudDistance');
+    if (el) el.innerHTML = `${shownM}<span>m</span>`;
+  }
 
     updatePlayerMotion(mesh, dt, t);
     advanceTrack(moveZ);
